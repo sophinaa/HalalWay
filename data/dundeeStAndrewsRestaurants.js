@@ -10,7 +10,6 @@ const dundeeStAndrewsRestaurants = [
   },
   contact: {
     phone: '01382 227722',
-    email: 'info@taza.co.uk',
     website: 'https://www.taza.co.uk',
   },
   location: {
@@ -20,9 +19,9 @@ const dundeeStAndrewsRestaurants = [
   cuisine: 'Indian',
   priceRange: '££',
   halalInfo: {
-    overallStatus: 'all-halal',    
+    overallStatus: 'partial-halal',  
     chickenHalal: true,
-    redMeatHalal: true,
+    redMeatHalal: false,
     porkServed: false,
     notes: 'Halal options available; verification recommended for specific meats.',
   },
@@ -54,6 +53,57 @@ const dundeeStAndrewsRestaurants = [
   lastVerified: '2025-01-20',
   verifiedBy: 'HalalWay Research',
 },
+
+
+
+{
+  id: 'dundee_02',
+  name: 'Mirch Masala Restaurant',
+  city: 'Dundee',
+  area: 'City Centre',
+  address: {
+    line1: '5 Hawkhill',
+    postcode: 'DD1 5GP',
+  },
+  contact: {
+    phone: 44 1382 480 480,                     // needs verification
+    email: null,                     // not listed
+    website: 'https://mirchmasaladundee.com',
+  },
+  location: {
+    lat: null,                       // add later if you want
+    lng: null,
+  },
+  cuisine: 'Pakistani',
+  priceRange: '££',
+  halalInfo: {
+     overallStatus: 'all-halal',    
+    chickenHalal: true,
+    redMeatHalal: true,
+    porkServed: false,
+    notes: 'Website confirms halal status of all meats.',
+  },
+  alcoholInfo: {
+    servesAlcohol: null              // not verified
+  },
+  openingHours: {},                  // not publicly listed clearly
+  reviews: {
+    averageRating: null,
+    reviewCount: null,
+    source: 'TripAdvisor',
+  },
+  amenities: {
+    buffet: false,
+    vegetarianOptions: true,
+    veganOptions: true,
+    wifi: null,
+  },
+  tags: ['city-centre', 'pakistani-cuisine'],
+  serviceOptions: ['All you can eat', 'Wi-Fi', "Kids' menu"],
+  lastVerified: '2025-01-20',
+  verifiedBy: 'HalalWay Research',
+},
+
 
 
 ];
