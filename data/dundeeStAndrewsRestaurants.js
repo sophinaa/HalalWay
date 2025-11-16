@@ -1,0 +1,61 @@
+const dundeeStAndrewsRestaurants = [
+  {
+  id: 'dundee_01',
+  name: 'Taza Indian Buffet',
+  city: 'Dundee',
+  area: 'City Centre',
+  address: {
+    line1: '1 Camperdown St Unit 1A',
+    postcode: 'DD1 3JA',
+  },
+  contact: {
+    phone: '01382 227722',
+    email: 'info@taza.co.uk',
+    website: 'https://www.taza.co.uk',
+  },
+  location: {
+    lat: 56.46,
+    lng: -2.96,
+  },
+  cuisine: 'Indian',
+  priceRange: '££',
+  halalInfo: {
+    overallStatus: 'all-halal',    
+    chickenHalal: true,
+    redMeatHalal: true,
+    porkServed: false,
+    notes: 'Halal options available; verification recommended for specific meats.',
+  },
+  alcoholInfo: {
+    servesAlcohol: true                
+  },
+  openingHours: {
+    monday: [{ open: '12:00', close: '21:15' }],
+    tuesday: [{ open: '12:00', close: '21:15' }],
+    wednesday: [{ open: '12:00', close: '21:15' }],
+    thursday: [{ open: '12:00', close: '21:15' }],
+    friday: [{ open: '12:00', close: '21:30' }],
+    saturday: [{ open: '12:00', close: '21:30' }],
+    sunday: [{ open: '12:00', close: '20:30' }],
+  },
+  reviews: {
+    averageRating: null,
+    reviewCount: null,
+    source: 'TripAdvisor',
+  },
+  amenities: {
+    buffet: true,
+    vegetarianOptions: true,
+    veganOptions: true,
+    wifi: true,
+  },
+  tags: ['buffet', 'city-centre', 'indian-cuisine', 'all-you-can-eat'],
+  serviceOptions: ['All you can eat', 'Vegan options', 'Wi-Fi'],
+  lastVerified: '2025-01-20',
+  verifiedBy: 'HalalWay Research',
+},
+
+
+];
+
+export default dundeeStAndrewsRestaurants;
