@@ -66,12 +66,11 @@ const dundeeStAndrewsRestaurants = [
     postcode: 'DD1 5GP',
   },
   contact: {
-    phone: 44 1382 480 480,                     // needs verification
-    email: null,                     // not listed
+    phone: '+44 1382 480 480',
     website: 'https://mirchmasaladundee.com',
   },
   location: {
-    lat: null,                       // add later if you want
+    lat: null,                       
     lng: null,
   },
   cuisine: 'Pakistani',
@@ -84,7 +83,7 @@ const dundeeStAndrewsRestaurants = [
     notes: 'Website confirms halal status of all meats.',
   },
   alcoholInfo: {
-    servesAlcohol: null              // not verified
+    servesAlcohol: false              // not verified
   },
   openingHours: {},                  // not publicly listed clearly
   reviews: {
