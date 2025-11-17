@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
@@ -30,10 +30,19 @@ const MapScreen = ({ navigation }) => {
                 latitude: restaurant.location.lat,
                 longitude: restaurant.location.lng,
               }}
-              title={restaurant.name}
-              description={`${restaurant.city} · ${restaurant.halalInfo?.overallStatus ?? 'unknown halal'}`}
               onPress={() => handleMarkerPress(restaurant)}
-            />
+            >
+              <View style={styles.markerOuter}>
+                <View
+                  style={[
+                    styles.markerInner,
+                    restaurant.halalInfo?.overallStatus === 'all-halal'
+                      ? styles.markerAllHalal
+                      : styles.markerOther,
+                  ]}
+                />
+              </View>
+            </Marker>
           ))}
       </MapView>
     </View>
@@ -43,6 +52,25 @@ const MapScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  markerOuter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerInner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  markerAllHalal: {
+    backgroundColor: '#059669',
+  },
+  markerOther: {
+    backgroundColor: '#6b7280',
+  },
 });
 
 export default MapScreen;

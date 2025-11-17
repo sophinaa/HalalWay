@@ -1,12 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 
@@ -101,10 +94,6 @@ export default function HomeScreen({ navigation }) {
                 active={filterMode === 'no-alcohol'}
                 onPress={() => setFilterMode('no-alcohol')}
               />
-              <View style={{ flex: 1 }} />
-              <TouchableOpacity style={styles.mapButton} onPress={() => navigation.navigate('Map')}>
-                <Text style={styles.mapButtonText}>Map</Text>
-              </TouchableOpacity>
             </View>
           </View>
         }
@@ -222,17 +211,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#fff',
-    fontWeight: '600',
-  },
-  mapButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#111827',
-  },
-  mapButtonText: {
-    color: '#fff',
-    fontSize: 14,
     fontWeight: '600',
   },
 });

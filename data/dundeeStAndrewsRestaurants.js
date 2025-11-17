@@ -330,43 +330,6 @@ const dundeeStAndrewsRestaurants = [
 },
 
 
-{
-  id: 'dundee_09',
-  name: "Pepe's Piri Piri",
-  city: 'Dundee',
-  area: 'City Centre',
-  address: {
-    line1: 'Unit 2, 40 Whitehall Street',
-    postcode: 'DD1 4AF',
-  },
-  contact: {
-    phone: '01382 202020',
-    website: 'https://www.pepes.co.uk',
-  },
-  location: {
-    lat: 56.4592,
-    lng: -2.9720,
-  },
-  cuisine: 'Peri Peri / Grilled Chicken',
-  priceRange: '£',
-  halalInfo: {
-    overallStatus: 'all-halal',
-    chickenHalal: true,
-    redMeatHalal: false,
-    porkServed: false,
-    notes: 'Franchise — all chicken halal nationwide.',
-  },
-  alcoholInfo: {
-    servesAlcohol: false,
-  },
-  openingHours: {},
-  reviews: {},
-  amenities: {},
-  tags: ['peri-peri', 'chicken', 'halal'],
-  serviceOptions: ['Takeaway', 'Delivery'],
-  lastVerified: '2025-01-20',
-  verifiedBy: 'HalalWay Research',
-},
 
 
 {
