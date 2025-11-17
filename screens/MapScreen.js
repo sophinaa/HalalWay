@@ -1,133 +1,94 @@
 import React from 'react';
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 
-const MapScreen = ({ navigation, route }) => {
-  const mapRef = useRef(null);
-  const focusRestaurantId = route?.params?.focusRestaurantId;
-  const initialRegion = {
-    latitude: 56.455,
-    longitude: -2.97,
-    latitudeDelta: 0.2,
-    longitudeDelta: 0.2,
+export default function MapScreen() {
+  const restaurantsWithLocation = restaurants.filter(
+    r => r.location && r.location.lat != null && r.location.lng != null,
+  );
+
+  const openInMaps = restaurant => {
+    const { lat, lng } = restaurant.location;
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    Linking.openURL(url).catch(err => console.error('Failed to open maps:', err));
   };
 
-  const handleMarkerPress = restaurant => {
-    if (navigation?.navigate) {
-      navigation.navigate('RestaurantDetails', { restaurantId: restaurant.id });
-    }
-  };
-
-  useEffect(() => {
-    if (!focusRestaurantId || !mapRef.current) return;
-    const target = restaurants.find(r => r.id === focusRestaurantId);
-    if (!target?.location?.lat || !target?.location?.lng) return;
-    mapRef.current.animateToRegion(
-      {
-        latitude: target.location.lat,
-        longitude: target.location.lng,
-        latitudeDelta: 0.03,
-        longitudeDelta: 0.03,
-      },
-      800,
-    );
-  }, [focusRestaurantId]);
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <Text style={styles.name}>{item.name}</Text>
+      <Text style={styles.detail}>
+        {item.cuisine} · {item.city}
+      </Text>
+      <Text style={styles.detail}>Halal: {item.halalInfo?.overallStatus ?? 'unknown'}</Text>
+      <Text style={styles.detail}>Alcohol: {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}</Text>
+      <TouchableOpacity style={styles.button} onPress={() => openInMaps(item)}>
+        <Text style={styles.buttonText}>Open in Maps</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
-        {restaurants
-          .filter(r => r.location?.lat && r.location?.lng)
-          .map(r => (
-            <Marker
-              key={r.id}
-              coordinate={{
-                latitude: r.location.lat,
-                longitude: r.location.lng,
-              }}
-            >
-              <View style={styles.markerOuter}>
-                <View
-                  style={[
-                    styles.markerInner,
-                    r.halalInfo?.overallStatus === 'all-halal'
-                      ? styles.markerAllHalal
-                      : styles.markerOther,
-                  ]}
-                />
-              </View>
-              <Callout onPress={() => handleMarkerPress(r)}>
-                <View style={styles.callout}>
-                  <Text style={styles.calloutTitle}>{r.name}</Text>
-                  <Text style={styles.calloutMeta}>
-                    {r.city}
-                    {r.address?.postcode ? ` · ${r.address.postcode}` : ''}
-                  </Text>
-                  <Text style={styles.calloutText}>
-                    Halal: {r.halalInfo?.overallStatus || 'unknown'}
-                  </Text>
-                  <Text style={styles.calloutText}>
-                    Alcohol: {r.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
-                  </Text>
-                  <Text style={styles.calloutLink}>Tap for details →</Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-      </MapView>
+      <Text style={styles.title}>HalalWay Map</Text>
+      <Text style={styles.subtitle}>Tap a restaurant to open it in Google/Apple Maps.</Text>
+      <FlatList
+        data={restaurantsWithLocation}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
+      />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-  markerOuter: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    backgroundColor: '#fff',
   },
-  markerInner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  markerAllHalal: {
-    backgroundColor: '#059669',
-  },
-  markerOther: {
-    backgroundColor: '#6b7280',
-  },
-  callout: {
-    maxWidth: 220,
-    gap: 2,
-  },
-  calloutTitle: {
-    fontWeight: '600',
-    fontSize: 14,
-    color: '#0f172a',
-  },
-  calloutMeta: {
-    fontSize: 12,
-    color: '#475569',
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  calloutText: {
-    fontSize: 12,
-    color: '#111827',
+  subtitle: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 16,
   },
-  calloutLink: {
-    fontSize: 12,
-    color: '#059669',
-    marginTop: 4,
+  listContent: {
+    paddingBottom: 24,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  name: {
+    fontSize: 18,
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  detail: {
+    fontSize: 14,
+    color: '#555',
+  },
+  button: {
+    marginTop: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
-
-export default MapScreen;
