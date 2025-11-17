@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,12 @@ const LoginScreen = () => {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const backgroundColor = isDark ? '#0b1120' : '#fff';
+  const cardColor = isDark ? '#111827' : '#fff';
+  const primaryText = isDark ? '#f8fafc' : '#111827';
+  const secondaryText = isDark ? '#cbd5f5' : '#6b7280';
 
   const onSubmit = async () => {
     try {
@@ -26,14 +32,17 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>HalalWay</Text>
-      <Text style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor }]}>
+      <Text style={[styles.title, { color: primaryText }]}>HalalWay</Text>
+      <Text style={[styles.subtitle, { color: secondaryText }]}>
         {mode === 'login' ? 'Log in to your account' : 'Create a new account'}
       </Text>
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { backgroundColor: cardColor, color: primaryText, borderColor: isDark ? '#334155' : '#d1d5db' },
+        ]}
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
@@ -42,7 +51,10 @@ const LoginScreen = () => {
       />
 
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { backgroundColor: cardColor, color: primaryText, borderColor: isDark ? '#334155' : '#d1d5db' },
+        ]}
         placeholder="Password (min 6 chars)"
         secureTextEntry
         value={password}
@@ -57,7 +69,7 @@ const LoginScreen = () => {
         onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}
         style={styles.switchMode}
       >
-        <Text style={styles.switchText}>
+        <Text style={[styles.switchText, { color: secondaryText }]}>
           {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
         </Text>
       </TouchableOpacity>
@@ -66,12 +78,11 @@ const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
+  container: { flex: 1, padding: 24, justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 14, textAlign: 'center', color: '#6b7280', marginBottom: 24 },
+  subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 24 },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -87,7 +98,7 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   switchMode: { marginTop: 16, alignItems: 'center' },
-  switchText: { fontSize: 14, color: '#111827' },
+  switchText: { fontSize: 14 },
 });
 
 export default LoginScreen;

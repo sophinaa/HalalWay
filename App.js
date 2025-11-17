@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FavouritesProvider } from './contexts/FavouritesContext';
@@ -65,10 +66,13 @@ function RootNavigator() {
 }
 
 export default function App() {
+  const colorScheme = useColorScheme();
+  const navigationTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+
   return (
     <AuthProvider>
       <FavouritesProvider>
-        <NavigationContainer>
+        <NavigationContainer theme={navigationTheme}>
           <RootNavigator />
         </NavigationContainer>
       </FavouritesProvider>

@@ -1,9 +1,17 @@
 import React from 'react';
-import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 
 export default function MapScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const backgroundColor = isDark ? '#0b1120' : '#fff';
+  const cardBackground = isDark ? '#1f2937' : '#fff';
+  const borderColor = isDark ? '#334155' : '#e5e5e5';
+  const primaryText = isDark ? '#f8fafc' : '#111827';
+  const secondaryText = isDark ? '#cbd5f5' : '#555';
+  const accent = isDark ? '#38bdf8' : '#007AFF';
   const restaurantsWithLocation = restaurants.filter(
     r => r.location && r.location.lat != null && r.location.lng != null,
   );
@@ -15,23 +23,29 @@ export default function MapScreen() {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.detail}>
+    <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
+      <Text style={[styles.name, { color: primaryText }]}>{item.name}</Text>
+      <Text style={[styles.detail, { color: secondaryText }]}>
         {item.cuisine} · {item.city}
       </Text>
-      <Text style={styles.detail}>Halal: {item.halalInfo?.overallStatus ?? 'unknown'}</Text>
-      <Text style={styles.detail}>Alcohol: {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}</Text>
-      <TouchableOpacity style={styles.button} onPress={() => openInMaps(item)}>
-        <Text style={styles.buttonText}>Open in Maps</Text>
+      <Text style={[styles.detail, { color: secondaryText }]}>
+        Halal: {item.halalInfo?.overallStatus ?? 'unknown'}
+      </Text>
+      <Text style={[styles.detail, { color: secondaryText }]}>
+        Alcohol: {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
+      </Text>
+      <TouchableOpacity style={[styles.button, { borderColor: accent }]} onPress={() => openInMaps(item)}>
+        <Text style={[styles.buttonText, { color: accent }]}>Open in Maps</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>HalalWay Map</Text>
-      <Text style={styles.subtitle}>Tap a restaurant to open it in Google/Apple Maps.</Text>
+    <View style={[styles.container, { backgroundColor }]}>
+      <Text style={[styles.title, { color: primaryText }]}>HalalWay Map</Text>
+      <Text style={[styles.subtitle, { color: secondaryText }]}>
+        Tap a restaurant to open it in Google/Apple Maps.
+      </Text>
       <FlatList
         data={restaurantsWithLocation}
         keyExtractor={item => item.id}
@@ -47,7 +61,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
@@ -56,7 +69,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#555',
     marginBottom: 16,
   },
   listContent: {
@@ -64,7 +76,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: '#e5e5e5',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
@@ -76,7 +87,6 @@ const styles = StyleSheet.create({
   },
   detail: {
     fontSize: 14,
-    color: '#555',
   },
   button: {
     marginTop: 10,
@@ -84,11 +94,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#007AFF',
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
   },
 });
