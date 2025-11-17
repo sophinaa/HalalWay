@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FavouritesProvider } from './contexts/FavouritesContext';
 import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import MapScreen from './screens/MapScreen';
@@ -66,9 +67,11 @@ function RootNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
+      <FavouritesProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </FavouritesProvider>
     </AuthProvider>
   );
 }

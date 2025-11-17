@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+import { useFavourites } from '../contexts/FavouritesContext';
 
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params ?? {};
@@ -19,6 +20,9 @@ const RestaurantDetailsScreen = ({ route }) => {
     );
   }
 
+  const { addFavourite, removeFavourite, isFavourite } = useFavourites();
+  const favourite = isFavourite(restaurantId);
+
   const { name, city, area, address, halalInfo, alcoholInfo, openingHours, tags, serviceOptions } =
     restaurant;
 
@@ -32,6 +36,19 @@ const RestaurantDetailsScreen = ({ route }) => {
         {'\n'}
         {address?.postcode}
       </Text>
+      <TouchableOpacity
+        onPress={() => {
+          favourite ? removeFavourite(restaurantId) : addFavourite(restaurantId);
+        }}
+        style={[
+          styles.favouriteButton,
+          { backgroundColor: favourite ? '#dc2626' : '#059669' },
+        ]}
+      >
+        <Text style={styles.favouriteText}>
+          {favourite ? 'Remove from Favourites' : 'Add to Favourites ⭐'}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Halal & Alcohol</Text>
@@ -76,6 +93,15 @@ const RestaurantDetailsScreen = ({ route }) => {
           <Text style={styles.text}>{serviceOptions.join(' · ')}</Text>
         </View>
       ) : null}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Reviews</Text>
+        {(restaurant.reviews || []).map(review => (
+          <Text key={review.id} style={styles.text}>
+            {review.user}: {review.text}
+          </Text>
+        ))}
+        <Text style={styles.reviewNote}>(Reviews stored locally for demo)</Text>
+      </View>
     </ScrollView>
   );
 };
@@ -117,6 +143,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  favouriteButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  favouriteText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  reviewNote: {
+    marginTop: 8,
+    color: '#6b7280',
+    fontSize: 13,
   },
 });
 
