@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   SafeAreaView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -14,8 +15,17 @@ const formatHalalStatus = status => {
   return status.replace('-', ' ');
 };
 
-const RestaurantCard = ({ item }) => (
-  <View style={styles.card}>
+const FilterChip = ({ label, active, onPress }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={[styles.chip, active && styles.chipActive]}
+  >
+    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const RestaurantCard = ({ item, onPress }) => (
+  <TouchableOpacity style={styles.card} onPress={onPress}>
     <Text style={styles.cardTitle}>{item.name}</Text>
     <Text style={styles.cardMeta}>
       {item.cuisine} · {item.city} · {item.priceRange}
@@ -35,27 +45,67 @@ const RestaurantCard = ({ item }) => (
       Halal: {formatHalalStatus(item.halalInfo?.overallStatus)} · Alcohol:{' '}
       {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
     </Text>
-  </View>
+    <Text style={styles.detailHint}>Tap for details →</Text>
+  </TouchableOpacity>
 );
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
+  const [filterMode, setFilterMode] = useState('all');
+
+  const filteredRestaurants = useMemo(() => {
+    switch (filterMode) {
+      case 'all-halal':
+        return restaurants.filter(r => r.halalInfo?.overallStatus === 'all-halal');
+      case 'no-alcohol':
+        return restaurants.filter(r => r.alcoholInfo?.servesAlcohol === false);
+      default:
+        return restaurants;
+    }
+  }, [filterMode]);
+
+  const renderItem = ({ item }) => (
+    <RestaurantCard
+      item={item}
+      onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.id })}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
-        data={restaurants}
+        data={filteredRestaurants}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <RestaurantCard item={item} />}
+        renderItem={renderItem}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={styles.title}>HalalWay</Text>
-            <Text style={styles.subtitle}>
-              Discover halal restaurants across Dundee & St Andrews.
-            </Text>
-            <Text style={styles.body}>
-              This is the home screen. Later you can show search, filters, and a list of nearby halal
-              restaurants here. For now, here are a few verified places to get you started.
-            </Text>
+          <View style={styles.headerBlock}>
+            <View style={styles.header}>
+              <Text style={styles.title}>HalalWay</Text>
+              <Text style={styles.subtitle}>
+                Discover halal restaurants across Dundee & St Andrews.
+              </Text>
+              <Text style={styles.body}>
+                Use filters to focus on all-halal venues, alcohol-free spaces, or browse everything
+                verified so far.
+              </Text>
+            </View>
+            <View style={styles.filterBar}>
+              <FilterChip label="All" active={filterMode === 'all'} onPress={() => setFilterMode('all')} />
+              <FilterChip
+                label="All-halal"
+                active={filterMode === 'all-halal'}
+                onPress={() => setFilterMode('all-halal')}
+              />
+              <FilterChip
+                label="No alcohol"
+                active={filterMode === 'no-alcohol'}
+                onPress={() => setFilterMode('no-alcohol')}
+              />
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity style={styles.mapButton} onPress={() => navigation.navigate('Map')}>
+                <Text style={styles.mapButtonText}>Map</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         }
       />
@@ -73,9 +123,12 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     gap: 16,
   },
+  headerBlock: {
+    gap: 16,
+    marginBottom: 8,
+  },
   header: {
     gap: 12,
-    marginBottom: 8,
   },
   title: {
     fontSize: 28,
@@ -140,5 +193,46 @@ const styles = StyleSheet.create({
   metaNote: {
     fontSize: 12,
     color: '#64748b',
+  },
+  detailHint: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#16a34a',
+    fontWeight: '600',
+  },
+  filterBar: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+    backgroundColor: '#fff',
+  },
+  chipActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  chipTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  mapButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#111827',
+  },
+  mapButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

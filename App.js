@@ -1,41 +1,27 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from './screens/HomeScreen';
 import MapScreen from './screens/MapScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
 
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerTitleAlign: 'center',
-          tabBarIcon: ({ color, size }) => {
-            let iconName;
-
-            if (route.name === 'Home') {
-              iconName = 'home';
-            } else if (route.name === 'Map') {
-              iconName = 'map';
-            } else if (route.name === 'Profile') {
-              iconName = 'person';
-            }
-
-            return <MaterialIcons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#16a34a',
-          tabBarInactiveTintColor: 'gray',
-        })}
-      >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Map" component={MapScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
-      </Tab.Navigator>
+      <Stack.Navigator>
+        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'HalalWay' }} />
+        <Stack.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+        <Stack.Screen
+          name="RestaurantDetails"
+          component={RestaurantDetailsScreen}
+          options={{ title: 'Details' }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

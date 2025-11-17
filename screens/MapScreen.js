@@ -1,41 +1,48 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
-export default function MapScreen() {
+import restaurants from '../data/dundeeStAndrewsRestaurants';
+
+const MapScreen = ({ navigation }) => {
+  const initialRegion = {
+    latitude: 56.455,
+    longitude: -2.97,
+    latitudeDelta: 0.2,
+    longitudeDelta: 0.2,
+  };
+
+  const handleMarkerPress = restaurant => {
+    if (navigation?.navigate) {
+      navigation.navigate('RestaurantDetails', { restaurantId: restaurant.id });
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Map</Text>
-      <Text style={styles.subtitle}>Halal spots near you (placeholder).</Text>
-      <Text style={styles.body}>
-        Later this screen will use a real map component to show halal
-        restaurants across the UK and indicate whether they serve alcohol.
-      </Text>
+      <MapView style={styles.map} initialRegion={initialRegion}>
+        {restaurants
+          .filter(r => r.location?.lat && r.location?.lng)
+          .map(restaurant => (
+            <Marker
+              key={restaurant.id}
+              coordinate={{
+                latitude: restaurant.location.lat,
+                longitude: restaurant.location.lng,
+              }}
+              title={restaurant.name}
+              description={`${restaurant.city} · ${restaurant.halalInfo?.overallStatus ?? 'unknown halal'}`}
+              onPress={() => handleMarkerPress(restaurant)}
+            />
+          ))}
+      </MapView>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  body: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#555',
-  },
+  container: { flex: 1 },
+  map: { flex: 1 },
 });
+
+export default MapScreen;
