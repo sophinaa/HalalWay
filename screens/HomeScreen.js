@@ -1,12 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useFavourites } from '../contexts/FavouritesContext';
 
 const formatHalalStatus = status => {
-  if (!status) return 'unknown';
-  return status.replace('-', ' ');
+  if (!status || typeof status !== 'string') {
+    return 'Unknown';
+  }
+  return status
+    .replace(/-/g, ' ')
+    .split(' ')
+    .map(word => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ''))
+    .join(' ');
 };
 
 const FilterChip = ({ label, active, onPress, isDark }) => (
@@ -32,6 +39,9 @@ const FilterChip = ({ label, active, onPress, isDark }) => (
 
 const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
   const colors = themeColors ?? {};
+  const tagsToShow = Array.isArray(item.tags) ? item.tags.slice(0, 3) : [];
+  const postcode = item?.address?.postcode ?? 'Postcode tbc';
+  const addressLine = item?.address?.line1 ?? 'Address coming soon';
   return (
     <TouchableOpacity
       style={[
@@ -45,11 +55,11 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
         {item.cuisine} · {item.city} · {item.priceRange}
       </Text>
       <Text style={[styles.metaLine, { color: colors.metaLineColor ?? '#64748b' }]}>
-        {item.city} · {item.address?.postcode ?? 'Postcode tbc'}
+        {item.city} · {postcode}
       </Text>
-      <Text style={[styles.cardBody, { color: colors.secondaryText ?? '#475569' }]}>{item.address.line1}</Text>
+      <Text style={[styles.cardBody, { color: colors.secondaryText ?? '#475569' }]}>{addressLine}</Text>
       <View style={styles.tagRow}>
-        {item.tags.slice(0, 3).map(tag => (
+        {tagsToShow.map(tag => (
           <Text
             style={[
               styles.tag,

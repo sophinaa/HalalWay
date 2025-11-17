@@ -220,6 +220,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['pakistani', 'all-halal', 'family-friendly'],
+    serviceOptions: [],
   },
 
   {
@@ -251,6 +253,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['fried chicken', 'late-night', 'student-friendly'],
+    serviceOptions: [],
   },
 
   {
@@ -282,6 +286,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['burgers', 'grill', 'halal'],
+    serviceOptions: [],
   },
 
   {
@@ -313,6 +319,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['american', 'grill', 'halal'],
+    serviceOptions: [],
   },
 
   {
@@ -344,6 +352,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: true,
     },
+    tags: ['turkish', 'mediterranean', 'all-halal'],
+    serviceOptions: [],
   },
 
   {
@@ -375,6 +385,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['pakistani', 'takeaway'],
+    serviceOptions: [],
   },
 
   {
@@ -406,6 +418,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['peri-peri', 'chicken', 'fast casual'],
+    serviceOptions: [],
   },
 
   {
@@ -437,6 +451,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['doner', 'fast food', 'late-night'],
+    serviceOptions: [],
   },
 
   {
@@ -468,6 +484,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['peri-peri', 'takeaway'],
+    serviceOptions: [],
   },
 
   // Extra Dundee dessert spot (local-only info, you can refine later)
@@ -500,6 +518,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['dessert', 'late-night', 'student-friendly'],
+    serviceOptions: [],
   },
 
   {
@@ -531,6 +551,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['shawarma', 'middle eastern', 'takeaway'],
+    serviceOptions: [],
   },
 
   {
@@ -562,6 +584,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: true,
     },
+    tags: ['indian', 'balti', 'dine-in'],
+    serviceOptions: [],
   },
 
   {
@@ -593,6 +617,8 @@ const dundeeStAndrewsRestaurants = [
     alcoholInfo: {
       servesAlcohol: false,
     },
+    tags: ['grill', 'burgers', 'family-friendly'],
+    serviceOptions: [],
   },
 ];
 

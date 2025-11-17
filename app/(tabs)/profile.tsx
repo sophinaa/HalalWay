@@ -1,14 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HALAL_RESTAURANTS } from '@/constants/restaurants';
 
