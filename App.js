@@ -3,10 +3,10 @@ import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FavouritesProvider } from './contexts/FavouritesContext';
+import { ThemeProvider, useThemePreference } from './contexts/ThemeContext';
 import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import MapScreen from './screens/MapScreen';
@@ -65,17 +65,25 @@ function RootNavigator() {
   );
 }
 
-export default function App() {
-  const colorScheme = useColorScheme();
-  const navigationTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+function AppNavigator() {
+  const { theme } = useThemePreference();
+  const navigationTheme = theme === 'dark' ? DarkTheme : DefaultTheme;
 
   return (
-    <AuthProvider>
-      <FavouritesProvider>
-        <NavigationContainer theme={navigationTheme}>
-          <RootNavigator />
-        </NavigationContainer>
-      </FavouritesProvider>
-    </AuthProvider>
+    <NavigationContainer theme={navigationTheme}>
+      <RootNavigator />
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <FavouritesProvider>
+          <AppNavigator />
+        </FavouritesProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

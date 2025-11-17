@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useFavourites } from '../contexts/FavouritesContext';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const formatHalalStatus = status => {
   if (!status || typeof status !== 'string') {
@@ -39,55 +40,46 @@ const FilterChip = ({ label, active, onPress, isDark }) => (
 
 const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
   const colors = themeColors ?? {};
-  const tagsToShow = Array.isArray(item.tags) ? item.tags.slice(0, 3) : [];
-  const postcode = item?.address?.postcode ?? 'Postcode tbc';
-  const addressLine = item?.address?.line1 ?? 'Address coming soon';
+  const halalText =
+    item.halalInfo?.overallStatus ||
+    (item.halalInfo?.chickenHalal || item.halalInfo?.redMeatHalal ? 'halal-friendly' : 'unknown');
+  const alcoholText =
+    item.alcoholInfo?.servesAlcohol === true
+      ? 'Yes'
+      : item.alcoholInfo?.servesAlcohol === false
+      ? 'No'
+      : 'Unknown';
+  const tags = Array.isArray(item.tags) ? item.tags : [];
+
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        { backgroundColor: colors.cardBackground ?? '#fff', borderColor: colors.borderColor ?? '#e2e8f0' },
-      ]}
-      onPress={onPress}
-    >
-      <Text style={[styles.cardTitle, { color: colors.primaryText ?? '#0f172a' }]}>{item.name}</Text>
-      <Text style={[styles.cardMeta, { color: colors.secondaryText ?? '#475569' }]}>
-        {item.cuisine} · {item.city} · {item.priceRange}
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.cardHeaderRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.cardTitle, { color: colors.primaryText ?? '#0f172a' }]}>{item.name}</Text>
+          <Text style={styles.cardSubtitle}>
+            {item.cuisine || 'Restaurant'} {item.priceRange ? `· ${item.priceRange}` : ''}
+          </Text>
+          <Text style={styles.cardMeta}>
+            {item.city}
+            {item.address?.postcode ? ` · ${item.address.postcode}` : ''}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onViewMap} style={styles.mapChip}>
+          <Text style={styles.mapChipText}>Map</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.metaNote}>
+        Halal: {halalText} · Alcohol: {alcoholText}
       </Text>
-      <Text style={[styles.metaLine, { color: colors.metaLineColor ?? '#64748b' }]}>
-        {item.city} · {postcode}
-      </Text>
-      <Text style={[styles.cardBody, { color: colors.secondaryText ?? '#475569' }]}>{addressLine}</Text>
+
       <View style={styles.tagRow}>
-        {tagsToShow.map(tag => (
-          <Text
-            style={[
-              styles.tag,
-              { backgroundColor: colors.tagBackground ?? '#e2e8f0', color: colors.tagText ?? '#0f172a' },
-            ]}
-            key={`${item.id}-${tag}`}
-          >
+        {tags.slice(0, 3).map(tag => (
+          <Text key={tag} style={styles.tag}>
             {tag}
           </Text>
         ))}
       </View>
-      <Text style={[styles.metaNote, { color: colors.mutedText ?? '#64748b' }]}>
-        Halal: {formatHalalStatus(item.halalInfo?.overallStatus)} · Alcohol:{' '}
-        {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
-      </Text>
-      <Text style={[styles.detailHint, { color: '#16a34a' }]}>Tap for details →</Text>
-      <TouchableOpacity
-        style={[
-          styles.mapLink,
-          {
-            backgroundColor: colors.isDark ? '#1f2937' : '#e5e7eb',
-            borderColor: colors.isDark ? '#475569' : '#d1d5db',
-          },
-        ]}
-        onPress={onViewMap}
-      >
-        <Text style={[styles.mapLinkText, { color: colors.isDark ? '#a5f3fc' : '#111827' }]}>View on map</Text>
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
@@ -95,8 +87,8 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
   const { favourites } = useFavourites();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { theme } = useThemePreference();
+  const isDark = theme === 'dark';
 
   const filteredRestaurants = useMemo(() => {
     switch (filterMode) {
@@ -132,7 +124,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <FlatList
         data={filteredRestaurants}
         keyExtractor={item => item.id}
@@ -185,7 +177,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 32,
+    paddingBottom: 16,
     gap: 16,
   },
   headerBlock: {
@@ -210,61 +203,67 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
+    backgroundColor: '#ffffff',
     borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
-    backgroundColor: '#fff',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
+  cardSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
   cardMeta: {
-    fontSize: 14,
-  },
-  metaLine: {
-    fontSize: 13,
-  },
-  cardBody: {
-    fontSize: 13,
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
   },
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    marginTop: 6,
   },
   tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    color: '#111827',
+    backgroundColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    marginRight: 4,
+    marginBottom: 4,
   },
   metaNote: {
     fontSize: 12,
-  },
-  detailHint: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#16a34a',
-    fontWeight: '600',
-  },
-  mapLink: {
+    color: '#111827',
     marginTop: 6,
-    alignSelf: 'flex-start',
+  },
+  mapChip: {
+    backgroundColor: '#059669',
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginLeft: 8,
+    marginTop: 2,
   },
-  mapLinkText: {
-    fontSize: 12,
+  mapChipText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
   },
   filterBar: {
     flexDirection: 'row',

@@ -17,7 +17,7 @@ export default function HomeScreen() {
   const featured = HALAL_RESTAURANTS.slice(0, 3);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>HalalWay</Text>
         <Text style={styles.subtitle}>Discover halal restaurants across the UK.</Text>

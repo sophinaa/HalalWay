@@ -1,14 +1,15 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useFavourites } from '../contexts/FavouritesContext';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params;
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { theme } = useThemePreference();
+  const isDark = theme === 'dark';
   const backgroundColor = isDark ? '#0b1120' : '#fff';
   const primaryText = isDark ? '#f8fafc' : '#111827';
   const secondaryText = isDark ? '#cbd5f5' : '#4b5563';

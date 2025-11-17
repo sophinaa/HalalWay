@@ -1,11 +1,12 @@
 import React from 'react';
-import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 export default function MapScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { theme } = useThemePreference();
+  const isDark = theme === 'dark';
   const backgroundColor = isDark ? '#0b1120' : '#fff';
   const cardBackground = isDark ? '#1f2937' : '#fff';
   const borderColor = isDark ? '#334155' : '#e5e5e5';

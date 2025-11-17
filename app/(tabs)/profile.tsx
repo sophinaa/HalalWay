@@ -14,7 +14,7 @@ const upcomingProfileFeatures = [
 
 export default function ProfileScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Login, favourites, and reviews.</Text>
