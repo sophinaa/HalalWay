@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+import { useFavourites } from '../contexts/FavouritesContext';
 
 const formatHalalStatus = status => {
   if (!status) return 'unknown';
@@ -47,6 +48,7 @@ const RestaurantCard = ({ item, onPress, onViewMap }) => (
 
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
+  const { favourites } = useFavourites();
 
   const filteredRestaurants = useMemo(() => {
     switch (filterMode) {
@@ -54,10 +56,12 @@ export default function HomeScreen({ navigation }) {
         return restaurants.filter(r => r.halalInfo?.overallStatus === 'all-halal');
       case 'no-alcohol':
         return restaurants.filter(r => r.alcoholInfo?.servesAlcohol === false);
+      case 'favourites':
+        return restaurants.filter(r => favourites.includes(r.id));
       default:
         return restaurants;
     }
-  }, [filterMode]);
+  }, [filterMode, favourites]);
 
   const renderItem = ({ item }) => (
     <RestaurantCard
@@ -97,6 +101,11 @@ export default function HomeScreen({ navigation }) {
                 label="No alcohol"
                 active={filterMode === 'no-alcohol'}
                 onPress={() => setFilterMode('no-alcohol')}
+              />
+              <FilterChip
+                label="Favourites"
+                active={filterMode === 'favourites'}
+                onPress={() => setFilterMode('favourites')}
               />
             </View>
           </View>
