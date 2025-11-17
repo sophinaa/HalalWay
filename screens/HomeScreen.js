@@ -17,7 +17,7 @@ const FilterChip = ({ label, active, onPress }) => (
   </TouchableOpacity>
 );
 
-const RestaurantCard = ({ item, onPress }) => (
+const RestaurantCard = ({ item, onPress, onViewMap }) => (
   <TouchableOpacity style={styles.card} onPress={onPress}>
     <Text style={styles.cardTitle}>{item.name}</Text>
     <Text style={styles.cardMeta}>
@@ -39,6 +39,9 @@ const RestaurantCard = ({ item, onPress }) => (
       {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
     </Text>
     <Text style={styles.detailHint}>Tap for details →</Text>
+    <TouchableOpacity style={styles.mapLink} onPress={onViewMap}>
+      <Text style={styles.mapLinkText}>View on map</Text>
+    </TouchableOpacity>
   </TouchableOpacity>
 );
 
@@ -60,6 +63,7 @@ export default function HomeScreen({ navigation }) {
     <RestaurantCard
       item={item}
       onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.id })}
+      onViewMap={() => navigation.navigate('MapTab', { focusRestaurantId: item.id })}
     />
   );
 
@@ -188,6 +192,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#16a34a',
     fontWeight: '600',
+  },
+  mapLink: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#e5e7eb',
+  },
+  mapLinkText: {
+    fontSize: 12,
+    color: '#111827',
   },
   filterBar: {
     flexDirection: 'row',
