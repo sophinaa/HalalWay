@@ -20,6 +20,9 @@ const RestaurantCard = ({ item }) => (
     <Text style={styles.cardMeta}>
       {item.cuisine} · {item.city} · {item.priceRange}
     </Text>
+    <Text style={styles.metaLine}>
+      {item.city} · {item.address?.postcode ?? 'Postcode tbc'}
+    </Text>
     <Text style={styles.cardBody}>{item.address.line1}</Text>
     <View style={styles.tagRow}>
       {item.tags.slice(0, 3).map(tag => (
@@ -111,6 +114,10 @@ const styles = StyleSheet.create({
   cardMeta: {
     fontSize: 14,
     color: '#475569',
+  },
+  metaLine: {
+    fontSize: 13,
+    color: '#64748b',
   },
   cardBody: {
     fontSize: 13,
