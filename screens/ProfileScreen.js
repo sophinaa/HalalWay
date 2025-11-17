@@ -1,60 +1,101 @@
-import React from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { favourites } = useFavourites();
-  const { theme, themeMode, setThemeMode } = useThemePreference();
-  const isDark = theme === 'dark';
+  const { theme, themeMode, setThemeMode, themeColors } = useThemePreference();
   const useSystemTheme = themeMode === 'system';
-  const backgroundColor = isDark ? '#0b1120' : '#fff';
-  const cardBackground = isDark ? '#1f2937' : '#fff';
-  const borderColor = isDark ? '#334155' : '#e5e7eb';
-  const primaryText = isDark ? '#f8fafc' : '#111827';
-  const secondaryText = isDark ? '#cbd5f5' : '#475569';
+  const backgroundColor = themeColors.background;
+  const cardBackground = themeColors.card;
+  const borderColor = themeColors.border;
+  const primaryText = themeColors.textPrimary;
+  const secondaryText = themeColors.textSecondary;
 
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
+  const [profilePhoto, setProfilePhoto] = useState(null);
+
+  const pickProfilePhoto = async () => {
+    Alert.alert('Coming soon', 'Photo uploads will be available once media picker is installed.');
+  };
 
   if (!user) {
     return (
-      <View style={[styles.container, { backgroundColor }]}>
-        <Text style={[styles.title, { color: primaryText }]}>Not logged in</Text>
-        <Text style={[styles.text, { color: secondaryText }]}>Please log in to see your profile.</Text>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={[styles.title, { color: primaryText }]}>Not logged in</Text>
+          <Text style={[styles.text, { color: secondaryText }]}>Please log in to see your profile.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.title, { color: primaryText }]}>Profile</Text>
-
-      <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
-        <Text style={[styles.label, { color: secondaryText }]}>Email</Text>
-        <Text style={[styles.value, { color: primaryText }]}>{user.email}</Text>
-
-        <Text style={[styles.label, { color: secondaryText }]}>User ID</Text>
-        <Text style={[styles.value, { color: primaryText }]} numberOfLines={1}>
-          {user.uid}
-        </Text>
-
-        <Text style={[styles.label, { color: secondaryText }]}>Verified</Text>
-        <Text style={[styles.value, { color: primaryText }]}>{user.emailVerified ? 'Yes' : 'No'}</Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <Text style={[styles.title, { color: primaryText, textAlign: 'center' }]}>Profile</Text>
+      <View style={styles.avatarRow}>
+        <View style={styles.avatarSection}>
+        <View
+          style={[
+            styles.avatar,
+            { backgroundColor: themeColors.tagBackground, borderColor: themeColors.border },
+          ]}
+        >
+          {profilePhoto ? (
+            <Image source={{ uri: profilePhoto }} style={styles.avatarImage} />
+          ) : (
+            <Text style={[styles.avatarPlaceholder, { color: themeColors.textSecondary }]}>Add photo</Text>
+          )}
+        </View>
       </View>
-
+      <View style={styles.avatarText}>
+        <Text style={[styles.profileName, { color: primaryText }]}>{user.email?.split('@')[0] ?? 'HalalWay user'}</Text>
+        <TouchableOpacity
+          style={[styles.avatarButton, { backgroundColor: 'transparent' }]}
+          onPress={pickProfilePhoto}
+        >
+          <Text style={[styles.avatarButtonText, { color: themeColors.accent }]}>Edit profile photo</Text>
+        </TouchableOpacity>
+      </View>
+      </View>
       <View style={[styles.section, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
-        <Text style={[styles.sectionTitle, { color: primaryText }]}>Appearance</Text>
+        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Favourite restaurants</Text>
+        {favouriteRestaurants.length > 0 ? (
+          <TouchableOpacity
+            style={[styles.smallCard, { backgroundColor: cardBackground, borderColor }]}
+            onPress={() => Alert.alert('Coming soon', 'Favourites screen coming soon!')}
+          >
+            <Text style={[styles.smallCardValue, { color: primaryText }]}>
+              {favouriteRestaurants.length} saved spot{favouriteRestaurants.length === 1 ? '' : 's'}
+            </Text>
+            <Text style={[styles.smallCardDescription, { color: secondaryText }]}>
+              Tap to view and manage your saved places.
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.noFavourites}>
+            <Text style={[styles.noFavText, { color: secondaryText }]}>
+              Favourite a restaurant to save it here.
+            </Text>
+          </View>
+        )}
+      </View>
+      <View style={[styles.section, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
+        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Appearance</Text>
         <View style={styles.appearanceRow}>
-          <Text style={[styles.value, { color: primaryText }]}>Match device theme</Text>
+          <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>Match device theme</Text>
           <Switch
             value={useSystemTheme}
             onValueChange={value => setThemeMode(value ? 'system' : theme)}
-            thumbColor={isDark ? '#0f172a' : '#f8fafc'}
-            trackColor={{ false: '#94a3b8', true: '#16a34a' }}
+            thumbColor={themeColors.card}
+            trackColor={{ false: themeColors.muted, true: themeColors.accent }}
           />
         </View>
         {!useSystemTheme && (
@@ -65,9 +106,8 @@ const ProfileScreen = () => {
                 style={[
                   styles.themeButton,
                   {
-                    borderColor: borderColor,
-                    backgroundColor:
-                      themeMode === mode ? (mode === 'dark' ? '#0f172a' : '#16a34a') : cardBackground,
+                    borderColor,
+                    backgroundColor: themeMode === mode ? themeColors.accent : cardBackground,
                   },
                 ]}
                 onPress={() => setThemeMode(mode)}
@@ -75,7 +115,7 @@ const ProfileScreen = () => {
                 <Text
                   style={[
                     styles.themeButtonText,
-                    { color: themeMode === mode ? '#fff' : primaryText },
+                    { color: themeMode === mode ? themeColors.accentContrast : primaryText },
                   ]}
                 >
                   {mode === 'light' ? 'Light' : 'Dark'}
@@ -86,39 +126,49 @@ const ProfileScreen = () => {
         )}
       </View>
 
-      <View style={{ marginTop: 24 }}>
-        <Text style={[styles.sectionTitle, { color: primaryText }]}>My Favourite Restaurants</Text>
-        {favouriteRestaurants.length === 0 ? (
-          <Text style={[styles.value, { color: secondaryText }]}>No favourites yet.</Text>
-        ) : (
-          favouriteRestaurants.map(r => (
-            <Text key={r.id} style={[styles.value, { color: primaryText }]}>
-              • {r.name}
-            </Text>
-          ))
-        )}
+      <View style={styles.quickLinks}>
+        {[
+          { title: 'Personal details', description: 'Manage email and user ID', target: 'PersonalDetails' },
+          { title: 'Suggest a restaurant', description: 'Help us add new halal spots', target: 'SuggestRestaurant' },
+          { title: 'Support HalalWay', description: 'Fund audits & student researchers', target: 'Support' },
+          { title: 'Contact us', description: 'Partnerships, help, and audits', target: 'Contact' },
+          { title: 'Notifications', description: 'Pick which updates to receive', target: 'NotificationSettings' },
+          { title: 'About & terms', description: 'Learn how HalalWay works', target: 'Legal' },
+        ].map(link => (
+          <TouchableOpacity
+            key={link.title}
+            style={[styles.linkCard, { backgroundColor: cardBackground, borderColor }]}
+            onPress={() => navigation.navigate(link.target)}
+          >
+            <Text style={[styles.linkTitle, { color: primaryText }]}>{link.title}</Text>
+            <Text style={[styles.linkDescription, { color: secondaryText }]}>{link.description}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>Log out</Text>
+      <TouchableOpacity style={styles.logoutLink} onPress={logout}>
+        <Text style={[styles.logoutText, { color: secondaryText }]}>Log out</Text>
       </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
+  safeArea: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   card: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
+    alignItems: 'center',
   },
-  label: { fontSize: 13, color: '#6b7280', marginTop: 8 },
-  value: { fontSize: 15, color: '#111827' },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  label: { fontSize: 13, marginTop: 8, textAlign: 'center' },
+  value: { fontSize: 15, textAlign: 'center' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
   appearanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,15 +190,121 @@ const styles = StyleSheet.create({
   themeButtonText: {
     fontWeight: '600',
   },
-  logoutButton: {
-    backgroundColor: '#dc2626',
-    paddingVertical: 12,
-    borderRadius: 8,
+  avatarSection: {
     alignItems: 'center',
-    marginTop: 'auto',
+    marginBottom: 24,
   },
-  logoutText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  text: { fontSize: 14, color: '#333' },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  avatarText: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    fontSize: 12,
+  },
+  avatarButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  avatarButtonText: {
+    fontWeight: '600',
+  },
+  sectionButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  sectionButtonText: {
+    fontWeight: '600',
+  },
+  linkRow: {
+    paddingVertical: 10,
+  },
+  logoutLink: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  logoutText: { fontSize: 14, fontWeight: '600' },
+  text: { fontSize: 14 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  topCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 16,
+  },
+  smallCard: {
+    flex: 1,
+    minWidth: 160,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  smallCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  smallCardValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  smallCardDescription: {
+    fontSize: 13,
+  },
+  noFavourites: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  noFavText: {
+    fontSize: 13,
+  },
+  quickLinks: {
+    gap: 12,
+    marginTop: 16,
+  },
+  linkCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    gap: 4,
+    alignItems: 'center',
+  },
+  linkTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  linkDescription: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
 });
 
 export default ProfileScreen;

@@ -8,12 +8,10 @@ import { useThemePreference } from '../contexts/ThemeContext';
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params;
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
-  const { theme } = useThemePreference();
-  const isDark = theme === 'dark';
-  const backgroundColor = isDark ? '#0b1120' : '#fff';
-  const primaryText = isDark ? '#f8fafc' : '#111827';
-  const secondaryText = isDark ? '#cbd5f5' : '#4b5563';
-  const sectionBackground = isDark ? '#111827' : '#fff';
+  const { themeColors } = useThemePreference();
+  const backgroundColor = themeColors.background;
+  const primaryText = themeColors.textPrimary;
+  const secondaryText = themeColors.textSecondary;
 
   const restaurant = useMemo(() => restaurants.find(r => r.id === restaurantId), [restaurantId]);
 
@@ -61,10 +59,10 @@ const RestaurantDetailsScreen = ({ route }) => {
         onPress={() => (favourite ? removeFavourite(restaurantId) : addFavourite(restaurantId))}
         style={[
           styles.favButton,
-          favourite ? styles.favButtonActive : styles.favButtonInactive,
+          { backgroundColor: favourite ? '#dc2626' : themeColors.accent },
         ]}
       >
-        <Text style={styles.favButtonText}>
+        <Text style={[styles.favButtonText, { color: themeColors.accentContrast }]}>
           {favourite ? 'Remove from favourites' : 'Add to favourites ⭐'}
         </Text>
       </TouchableOpacity>
@@ -158,14 +156,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginBottom: 8,
   },
-  favButtonActive: {
-    backgroundColor: '#dc2626',
-  },
-  favButtonInactive: {
-    backgroundColor: '#059669',
-  },
   favButtonText: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },

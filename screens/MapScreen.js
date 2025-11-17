@@ -5,14 +5,7 @@ import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 export default function MapScreen() {
-  const { theme } = useThemePreference();
-  const isDark = theme === 'dark';
-  const backgroundColor = isDark ? '#0b1120' : '#fff';
-  const cardBackground = isDark ? '#1f2937' : '#fff';
-  const borderColor = isDark ? '#334155' : '#e5e5e5';
-  const primaryText = isDark ? '#f8fafc' : '#111827';
-  const secondaryText = isDark ? '#cbd5f5' : '#555';
-  const accent = isDark ? '#38bdf8' : '#007AFF';
+  const { themeColors } = useThemePreference();
   const restaurantsWithLocation = restaurants.filter(
     r => r.location && r.location.lat != null && r.location.lng != null,
   );
@@ -24,27 +17,30 @@ export default function MapScreen() {
   };
 
   const renderItem = ({ item }) => (
-    <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
-      <Text style={[styles.name, { color: primaryText }]}>{item.name}</Text>
-      <Text style={[styles.detail, { color: secondaryText }]}>
+    <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+      <Text style={[styles.name, { color: themeColors.textPrimary }]}>{item.name}</Text>
+      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
         {item.cuisine} · {item.city}
       </Text>
-      <Text style={[styles.detail, { color: secondaryText }]}>
+      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
         Halal: {item.halalInfo?.overallStatus ?? 'unknown'}
       </Text>
-      <Text style={[styles.detail, { color: secondaryText }]}>
+      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
         Alcohol: {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
       </Text>
-      <TouchableOpacity style={[styles.button, { borderColor: accent }]} onPress={() => openInMaps(item)}>
-        <Text style={[styles.buttonText, { color: accent }]}>Open in Maps</Text>
+      <TouchableOpacity
+        style={[styles.button, { borderColor: themeColors.accent }]}
+        onPress={() => openInMaps(item)}
+      >
+        <Text style={[styles.buttonText, { color: themeColors.accent }]}>Open in Maps</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.title, { color: primaryText }]}>HalalWay Map</Text>
-      <Text style={[styles.subtitle, { color: secondaryText }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <Text style={[styles.title, { color: themeColors.textPrimary }]}>HalalWay Map</Text>
+      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
         Tap a restaurant to open it in Google/Apple Maps.
       </Text>
       <FlatList

@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const LoginScreen = () => {
   const { login, signup } = useAuth();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? '#0b1120' : '#fff';
-  const cardColor = isDark ? '#111827' : '#fff';
-  const primaryText = isDark ? '#f8fafc' : '#111827';
-  const secondaryText = isDark ? '#cbd5f5' : '#6b7280';
+  const { themeColors } = useThemePreference();
+  const backgroundColor = themeColors.background;
+  const cardColor = themeColors.card;
+  const primaryText = themeColors.textPrimary;
+  const secondaryText = themeColors.textSecondary;
 
   const onSubmit = async () => {
     try {
@@ -41,9 +41,10 @@ const LoginScreen = () => {
       <TextInput
         style={[
           styles.input,
-          { backgroundColor: cardColor, color: primaryText, borderColor: isDark ? '#334155' : '#d1d5db' },
+          { backgroundColor: cardColor, color: primaryText, borderColor: themeColors.inputBorder },
         ]}
         placeholder="Email"
+        placeholderTextColor={themeColors.inputPlaceholder}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -53,16 +54,29 @@ const LoginScreen = () => {
       <TextInput
         style={[
           styles.input,
-          { backgroundColor: cardColor, color: primaryText, borderColor: isDark ? '#334155' : '#d1d5db' },
+          { backgroundColor: cardColor, color: primaryText, borderColor: themeColors.inputBorder },
         ]}
         placeholder="Password (min 6 chars)"
+        placeholderTextColor={themeColors.inputPlaceholder}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={onSubmit}>
-        <Text style={styles.buttonText}>{mode === 'login' ? 'Log in' : 'Sign up'}</Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: themeColors.accent }]}
+        onPress={onSubmit}
+      >
+        <Text style={[styles.buttonText, { color: themeColors.accentContrast }]}>
+          {mode === 'login' ? 'Log in' : 'Sign up'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.forgotButton}
+        onPress={() => Alert.alert('Coming soon', 'Password reset coming soon!')}
+      >
+        <Text style={[styles.forgotText, { color: themeColors.accent }]}>Forgot password?</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -97,6 +111,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  forgotButton: { marginTop: 12, alignItems: 'center' },
+  forgotText: { fontSize: 13, fontWeight: '600' },
   switchMode: { marginTop: 16, alignItems: 'center' },
   switchText: { fontSize: 14 },
 });

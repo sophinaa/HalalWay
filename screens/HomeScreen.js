@@ -17,20 +17,26 @@ const formatHalalStatus = status => {
     .join(' ');
 };
 
-const FilterChip = ({ label, active, onPress, isDark }) => (
+const FilterChip = ({ label, active, onPress, themeColors }) => (
   <TouchableOpacity
     onPress={onPress}
     style={[
       styles.chip,
-      isDark && styles.chipDark,
-      active && styles.chipActive,
+      {
+        backgroundColor: themeColors.tagBackground,
+        borderColor: themeColors.border,
+      },
+      active && {
+        backgroundColor: themeColors.accent,
+        borderColor: themeColors.accent,
+      },
     ]}
   >
     <Text
       style={[
         styles.chipText,
-        isDark && styles.chipTextDark,
-        active && styles.chipTextActive,
+        { color: themeColors.textSecondary },
+        active && { color: themeColors.accentContrast },
       ]}
     >
       {label}
@@ -52,30 +58,43 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
   const tags = Array.isArray(item.tags) ? item.tags : [];
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.textPrimary }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
       <View style={styles.cardHeaderRow}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.cardTitle, { color: colors.primaryText ?? '#0f172a' }]}>{item.name}</Text>
-          <Text style={styles.cardSubtitle}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary ?? '#0f172a' }]}>{item.name}</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.textSecondary ?? '#6b7280' }]}>
             {item.cuisine || 'Restaurant'} {item.priceRange ? `· ${item.priceRange}` : ''}
           </Text>
-          <Text style={styles.cardMeta}>
+          <Text style={[styles.cardMeta, { color: colors.muted ?? '#9ca3af' }]}>
             {item.city}
             {item.address?.postcode ? ` · ${item.address.postcode}` : ''}
           </Text>
         </View>
-        <TouchableOpacity onPress={onViewMap} style={styles.mapChip}>
-          <Text style={styles.mapChipText}>Map</Text>
+        <TouchableOpacity
+          onPress={onViewMap}
+          style={[styles.mapChip, { backgroundColor: colors.accent ?? '#059669' }]}
+        >
+          <Text style={[styles.mapChipText, { color: colors.accentContrast ?? '#fff' }]}>Map</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.metaNote}>
+      <Text style={[styles.metaNote, { color: colors.textSecondary ?? '#475569' }]}>
         Halal: {halalText} · Alcohol: {alcoholText}
       </Text>
 
       <View style={styles.tagRow}>
         {tags.slice(0, 3).map(tag => (
-          <Text key={tag} style={styles.tag}>
+          <Text
+            key={tag}
+            style={[
+              styles.tag,
+              { backgroundColor: colors.tagBackground ?? '#e5e7eb', color: colors.tagText ?? '#111827' },
+            ]}
+          >
             {tag}
           </Text>
         ))}
@@ -87,7 +106,7 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
   const { favourites } = useFavourites();
-  const { theme } = useThemePreference();
+  const { theme, themeColors } = useThemePreference();
   const isDark = theme === 'dark';
 
   const filteredRestaurants = useMemo(() => {
@@ -103,17 +122,6 @@ export default function HomeScreen({ navigation }) {
     }
   }, [filterMode, favourites]);
 
-  const backgroundColor = isDark ? '#0b1120' : '#ffffff';
-  const cardBackground = isDark ? '#1f2937' : '#ffffff';
-  const borderColor = isDark ? '#334155' : '#e2e8f0';
-  const primaryText = isDark ? '#f8fafc' : '#0f172a';
-  const secondaryText = isDark ? '#cbd5f5' : '#475569';
-  const mutedText = isDark ? '#94a3b8' : '#64748b';
-  const tagBackground = isDark ? '#1e293b' : '#e2e8f0';
-  const tagText = isDark ? '#e2e8f0' : '#0f172a';
-  const metaLineColor = isDark ? '#cbd5f5' : '#64748b';
-  const themeColors = { cardBackground, borderColor, primaryText, secondaryText, mutedText, tagBackground, tagText, metaLineColor, isDark };
-
   const renderItem = ({ item }) => (
     <RestaurantCard
       item={item}
@@ -124,43 +132,48 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
       <FlatList
         data={filteredRestaurants}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { backgroundColor: themeColors.background }]}
         renderItem={renderItem}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: primaryText }]}>HalalWay</Text>
-              <Text style={[styles.subtitle, { color: '#16a34a' }]}>
+              <Text style={[styles.title, { color: themeColors.textPrimary }]}>HalalWay</Text>
+              <Text style={[styles.subtitle, { color: themeColors.accent }]}>
                 Discover halal restaurants across Dundee & St Andrews.
               </Text>
-              <Text style={[styles.body, { color: secondaryText }]}>
+              <Text style={[styles.body, { color: themeColors.textSecondary }]}>
                 Use filters to focus on all-halal venues, alcohol-free spaces, or browse everything
                 verified so far.
               </Text>
             </View>
             <View style={styles.filterBar}>
-              <FilterChip label="All" active={filterMode === 'all'} onPress={() => setFilterMode('all')} isDark={isDark} />
+              <FilterChip
+                label="All"
+                active={filterMode === 'all'}
+                onPress={() => setFilterMode('all')}
+                themeColors={themeColors}
+              />
               <FilterChip
                 label="All-halal"
                 active={filterMode === 'all-halal'}
                 onPress={() => setFilterMode('all-halal')}
-                isDark={isDark}
+                themeColors={themeColors}
               />
               <FilterChip
                 label="No alcohol"
                 active={filterMode === 'no-alcohol'}
                 onPress={() => setFilterMode('no-alcohol')}
-                isDark={isDark}
+                themeColors={themeColors}
               />
               <FilterChip
                 label="Favourites"
                 active={filterMode === 'favourites'}
                 onPress={() => setFilterMode('favourites')}
-                isDark={isDark}
+                themeColors={themeColors}
               />
             </View>
           </View>
@@ -203,7 +216,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -224,12 +236,10 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: 13,
-    color: '#6b7280',
     marginTop: 2,
   },
   cardMeta: {
     fontSize: 12,
-    color: '#9ca3af',
     marginTop: 2,
   },
   tagRow: {
@@ -239,8 +249,6 @@ const styles = StyleSheet.create({
   },
   tag: {
     fontSize: 11,
-    color: '#111827',
-    backgroundColor: '#e5e7eb',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
@@ -249,11 +257,9 @@ const styles = StyleSheet.create({
   },
   metaNote: {
     fontSize: 12,
-    color: '#111827',
     marginTop: 6,
   },
   mapChip: {
-    backgroundColor: '#059669',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -261,7 +267,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   mapChipText: {
-    color: '#ffffff',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -274,26 +279,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#cbd5f5',
-    backgroundColor: '#fff',
-  },
-  chipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  chipDark: {
-    backgroundColor: '#0b1120',
-    borderColor: '#475569',
   },
   chipText: {
     fontSize: 13,
-    color: '#0f172a',
-  },
-  chipTextDark: {
-    color: '#e2e8f0',
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
 });

@@ -15,7 +15,7 @@ const upcomingProfileFeatures = [
 export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Login, favourites, and reviews.</Text>
 
@@ -78,7 +78,8 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingBottom: 32,
+    paddingTop: 56,
     gap: 24,
   },
   title: {

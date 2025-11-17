@@ -11,22 +11,35 @@ import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import MapScreen from './screens/MapScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import QiblaScreen from './screens/QiblaScreen';
 import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
+import SuggestRestaurantScreen from './screens/SuggestRestaurantScreen';
+import SupportScreen from './screens/SupportScreen';
+import ContactScreen from './screens/ContactScreen';
+import PersonalDetailsScreen from './screens/PersonalDetailsScreen';
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
+import LegalScreen from './screens/LegalScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const { themeColors } = useThemePreference();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#059669',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarActiveTintColor: themeColors.accent,
+        tabBarInactiveTintColor: themeColors.muted,
+        tabBarStyle: {
+          backgroundColor: themeColors.card,
+          borderTopColor: themeColors.border,
+        },
         tabBarIcon: ({ color, size }) => {
           const iconMap = {
             HomeTab: 'home',
             MapTab: 'map',
+            QiblaTab: 'explore',
             ProfileTab: 'person',
           };
           return <MaterialIcons name={iconMap[route.name] ?? 'trip-origin'} size={size} color={color} />;
@@ -35,6 +48,7 @@ function MainTabs() {
     >
       <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="MapTab" component={MapScreen} options={{ title: 'Map' }} />
+      <Tab.Screen name="QiblaTab" component={QiblaScreen} options={{ title: 'Qibla' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
@@ -59,6 +73,16 @@ function RootNavigator() {
             component={RestaurantDetailsScreen}
             options={{ title: 'Details' }}
           />
+          <Stack.Screen name="SuggestRestaurant" component={SuggestRestaurantScreen} options={{ title: 'Suggest a restaurant' }} />
+          <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Support HalalWay' }} />
+          <Stack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact us' }} />
+          <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} options={{ title: 'Personal details' }} />
+          <Stack.Screen
+            name="NotificationSettings"
+            component={NotificationSettingsScreen}
+            options={{ title: 'Notifications' }}
+          />
+          <Stack.Screen name="Legal" component={LegalScreen} options={{ title: 'About & terms' }} />
         </>
       )}
     </Stack.Navigator>
