@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,9 +6,31 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 export default function PersonalDetailsScreen() {
-  const { user } = useAuth();
+  const { user, updateDisplayName } = useAuth();
   const { themeColors } = useThemePreference();
   const [name, setName] = useState(user?.displayName ?? '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setName(user?.displayName ?? '');
+  }, [user?.displayName]);
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      Alert.alert('Name required', 'Please enter a valid name before saving.');
+      return;
+    }
+    try {
+      setSaving(true);
+      await updateDisplayName(trimmed);
+      Alert.alert('Saved', 'Your profile name has been updated.');
+    } catch (error) {
+      Alert.alert('Error', 'Unable to update your name right now. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
@@ -26,10 +48,19 @@ export default function PersonalDetailsScreen() {
           onChangeText={setName}
         />
         <TouchableOpacity
-          style={[styles.saveButton, { backgroundColor: themeColors.accent }]}
-          onPress={() => Alert.alert('Coming soon', 'Profile name updates coming soon!')}
+          style={[
+            styles.saveButton,
+            {
+              backgroundColor: themeColors.accent,
+              opacity: saving ? 0.7 : 1,
+            },
+          ]}
+          disabled={saving}
+          onPress={handleSave}
         >
-          <Text style={[styles.saveButtonText, { color: themeColors.accentContrast }]}>Save name</Text>
+          <Text style={[styles.saveButtonText, { color: themeColors.accentContrast }]}>
+            {saving ? 'Saving…' : 'Save name'}
+          </Text>
         </TouchableOpacity>
         <Text style={[styles.label, { color: themeColors.textSecondary }]}>Email</Text>
         <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.email ?? 'Not available'}</Text>

@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from 'firebase/auth';
 
 import { auth } from '../firebaseConfig';
@@ -36,7 +37,16 @@ export const AuthProvider = ({ children }) => {
     await signOut(auth);
   };
 
-  const value = { user, login, signup, logout, initialising };
+  const updateDisplayName = async newName => {
+    if (!auth.currentUser) {
+      return;
+    }
+    await updateProfile(auth.currentUser, { displayName: newName });
+    await auth.currentUser.reload();
+    setUser({ ...auth.currentUser });
+  };
+
+  const value = { user, login, signup, logout, initialising, updateDisplayName };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

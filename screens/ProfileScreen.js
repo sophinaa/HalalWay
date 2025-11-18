@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -18,11 +19,34 @@ const ProfileScreen = ({ navigation }) => {
   const primaryText = themeColors.textPrimary;
   const secondaryText = themeColors.textSecondary;
 
+  const preferredName =
+    (user?.displayName && user.displayName.trim()) ||
+    user?.email?.split('@')[0] ||
+    'HalalWay user';
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
   const [profilePhoto, setProfilePhoto] = useState(null);
 
   const pickProfilePhoto = async () => {
-    Alert.alert('Coming soon', 'Photo uploads will be available once media picker is installed.');
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant photo library permissions to update your profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.length) {
+        setProfilePhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Unable to pick an image right now. Please try again later.');
+    }
   };
 
   if (!user) {
@@ -56,7 +80,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
       </View>
       <View style={styles.avatarText}>
-        <Text style={[styles.profileName, { color: primaryText }]}>{user.email?.split('@')[0] ?? 'HalalWay user'}</Text>
+        <Text style={[styles.profileName, { color: primaryText }]}>{preferredName}</Text>
         <TouchableOpacity
           style={[styles.avatarButton, { backgroundColor: 'transparent' }]}
           onPress={pickProfilePhoto}
@@ -65,11 +89,15 @@ const ProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       </View>
-      <View style={[styles.section, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
+      <View style={[styles.section, styles.favouritesSection, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
         <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Favourite restaurants</Text>
         {favouriteRestaurants.length > 0 ? (
           <TouchableOpacity
-            style={[styles.smallCard, { backgroundColor: cardBackground, borderColor }]}
+            style={[
+              styles.smallCard,
+              styles.favouriteCard,
+              { backgroundColor: cardBackground, borderColor },
+            ]}
             onPress={() => Alert.alert('Coming soon', 'Favourites screen coming soon!')}
           >
             <Text style={[styles.smallCardValue, { color: primaryText }]}>
@@ -87,7 +115,7 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         )}
       </View>
-      <View style={[styles.section, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
+      <View style={[styles.section, styles.appearanceSection, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
         <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Appearance</Text>
         <View style={styles.appearanceRow}>
           <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>Match device theme</Text>
@@ -289,6 +317,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
   },
+  favouritesSection: {
+    marginTop: 12,
+  },
   linkCard: {
     borderRadius: 14,
     borderWidth: 1,
@@ -304,6 +335,15 @@ const styles = StyleSheet.create({
   linkDescription: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  favouriteCard: {
+    width: '100%',
+    alignItems: 'flex-start',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  appearanceSection: {
+    marginTop: 24,
   },
 });
 

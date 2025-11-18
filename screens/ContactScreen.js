@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useThemePreference } from '../contexts/ThemeContext';
@@ -17,7 +17,15 @@ export default function ContactScreen() {
         </Text>
         <TouchableOpacity
           style={[styles.button, { borderColor: themeColors.border, backgroundColor: themeColors.tagBackground }]}
-          onPress={() => Alert.alert('Coming soon', 'Contact form coming soon!')}
+          onPress={() => {
+            const email = 'sophina0212@gmail.com';
+            const subject = encodeURIComponent('HalalWay support');
+            const body = encodeURIComponent('Hi HalalWay team,\n\n');
+            const url = `mailto:${email}?subject=${subject}&body=${body}`;
+            Linking.openURL(url).catch(() => {
+              Alert.alert('Unable to open email', `Please email us at ${email}`);
+            });
+          }}
         >
           <Text style={[styles.buttonText, { color: themeColors.textPrimary }]}>Email support</Text>
         </TouchableOpacity>
@@ -41,4 +49,3 @@ const styles = StyleSheet.create({
   },
   buttonText: { fontWeight: '600', textTransform: 'uppercase' },
 });
-
