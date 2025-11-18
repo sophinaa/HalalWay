@@ -1,99 +1,413 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useThemePreference } from '../contexts/ThemeContext';
+import { useFavourites } from '../contexts/FavouritesContext';
 
-export default function MapScreen() {
+const defaultRegion = {
+  latitude: 56.46,
+  longitude: -2.97,
+  latitudeDelta: 0.08,
+  longitudeDelta: 0.08,
+};
+
+const FilterChip = ({ label, active, onPress, themeColors }) => (
+  <TouchableOpacity
+    style={[
+      styles.chip,
+      { borderColor: themeColors.border, backgroundColor: themeColors.card },
+      active && { backgroundColor: themeColors.accent, borderColor: themeColors.accent },
+    ]}
+    onPress={onPress}
+    activeOpacity={0.85}
+  >
+    <Text
+      style={[
+        styles.chipText,
+        { color: themeColors.textSecondary },
+        active && { color: themeColors.accentContrast },
+      ]}
+    >
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+const MapScreen = () => {
   const { themeColors } = useThemePreference();
-  const restaurantsWithLocation = restaurants.filter(
-    r => r.location && r.location.lat != null && r.location.lng != null,
-  );
+  const { favourites } = useFavourites();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const mapRef = useRef(null);
 
-  const openInMaps = restaurant => {
+  const restaurantsWithLocation = useMemo(
+    () => restaurants.filter(r => r?.location?.lat != null && r?.location?.lng != null),
+    [],
+  );
+  const [filterMode, setFilterMode] = useState('all');
+  const filteredRestaurants = useMemo(() => {
+    switch (filterMode) {
+      case 'all-halal':
+        return restaurantsWithLocation.filter(r => r.halalInfo?.overallStatus === 'all-halal');
+      case 'no-alcohol':
+        return restaurantsWithLocation.filter(r => r.alcoholInfo?.servesAlcohol === false);
+      case 'favourites':
+        return restaurantsWithLocation.filter(r => favourites.includes(r.id));
+      default:
+        return restaurantsWithLocation;
+    }
+  }, [filterMode, favourites, restaurantsWithLocation]);
+  const [selectedId, setSelectedId] = useState(filteredRestaurants[0]?.id ?? null);
+
+  const selectedRestaurant =
+    filteredRestaurants.find(r => r.id === selectedId) ??
+    filteredRestaurants[0] ??
+    restaurantsWithLocation[0];
+
+  const initialRegion =
+    selectedRestaurant && selectedRestaurant.location
+      ? {
+          latitude: selectedRestaurant.location.lat,
+          longitude: selectedRestaurant.location.lng,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }
+      : defaultRegion;
+
+  const focusOnRestaurant = useCallback(restaurant => {
+    if (!restaurant?.location) {
+      return;
+    }
+    setSelectedId(restaurant.id);
+    const region = {
+      latitude: restaurant.location.lat,
+      longitude: restaurant.location.lng,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    };
+    requestAnimationFrame(() => {
+      mapRef.current?.animateToRegion(region, 500);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (filteredRestaurants.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    const stillVisible = filteredRestaurants.some(r => r.id === selectedId);
+    if (!stillVisible) {
+      setSelectedId(filteredRestaurants[0].id);
+    }
+  }, [filteredRestaurants, selectedId]);
+
+  useEffect(() => {
+    const focusRestaurantId = route?.params?.focusRestaurantId;
+    if (focusRestaurantId) {
+      const target = restaurantsWithLocation.find(r => r.id === focusRestaurantId);
+      if (target) {
+        setFilterMode('all');
+        focusOnRestaurant(target);
+      }
+      navigation.setParams?.({ focusRestaurantId: undefined });
+    }
+  }, [
+    focusOnRestaurant,
+    navigation,
+    restaurantsWithLocation,
+    route?.params?.focusRestaurantId,
+  ]);
+
+  const handleOpenMaps = (restaurant, provider) => {
+    if (!restaurant?.location) {
+      return;
+    }
     const { lat, lng } = restaurant.location;
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    Linking.openURL(url).catch(err => console.error('Failed to open maps:', err));
+    const url =
+      provider === 'apple'
+        ? `http://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(restaurant.name)}`
+        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    Linking.openURL(url).catch(() => {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to open maps for this location');
+    });
   };
 
-  const renderItem = ({ item }) => (
-    <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-      <Text style={[styles.name, { color: themeColors.textPrimary }]}>{item.name}</Text>
-      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
-        {item.cuisine} · {item.city}
-      </Text>
-      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
-        Halal: {item.halalInfo?.overallStatus ?? 'unknown'}
-      </Text>
-      <Text style={[styles.detail, { color: themeColors.textSecondary }]}>
-        Alcohol: {item.alcoholInfo?.servesAlcohol ? 'Yes' : 'No'}
-      </Text>
+  const renderLocationCard = ({ item }) => {
+    const isActive = item.id === selectedId;
+    return (
       <TouchableOpacity
-        style={[styles.button, { borderColor: themeColors.accent }]}
-        onPress={() => openInMaps(item)}
+        style={[
+          styles.locationCard,
+          {
+            backgroundColor: themeColors.card,
+            borderColor: isActive ? themeColors.accent : themeColors.border,
+          },
+        ]}
+        onPress={() => focusOnRestaurant(item)}
+        activeOpacity={0.9}
       >
-        <Text style={[styles.buttonText, { color: themeColors.accent }]}>Open in Maps</Text>
+        <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>{item.name}</Text>
+        <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
+          {item.cuisine || 'Restaurant'} · {item.city}
+        </Text>
+        <Text style={[styles.cardMeta, { color: themeColors.muted }]}>
+          {item.address?.line1 || ''} {item.address?.postcode ? `· ${item.address.postcode}` : ''}
+        </Text>
+        <View style={styles.actionsRow}>
+          <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+            Halal: {item.halalInfo?.overallStatus ?? 'unknown'}
+          </Text>
+          <View style={styles.mapButtonsRow}>
+            <TouchableOpacity
+              style={[
+                styles.openMapsChip,
+                { borderColor: themeColors.accent, backgroundColor: themeColors.card },
+              ]}
+              onPress={() => handleOpenMaps(item, 'google')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.openMapsText, { color: themeColors.accent }]}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.openMapsChip,
+                { borderColor: themeColors.accent, backgroundColor: themeColors.card },
+              ]}
+              onPress={() => handleOpenMaps(item, 'apple')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.openMapsText, { color: themeColors.accent }]}>Apple</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
+
+  if (restaurantsWithLocation.length === 0) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
+        <View style={styles.headerBlock}>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Halal Map</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            No restaurants with coordinates available yet.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>HalalWay Map</Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Tap a restaurant to open it in Google/Apple Maps.
-      </Text>
-      <FlatList
-        data={restaurantsWithLocation}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-      />
-    </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
+      <View style={styles.container}>
+        <View style={styles.headerBlock}>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Explore the map</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            Tap a pin or choose from the list to see restaurant details. Use Open in Maps for turn-by-turn
+            directions.
+          </Text>
+        </View>
+        <View style={styles.filterBar}>
+          <FilterChip
+            label="All"
+            active={filterMode === 'all'}
+            onPress={() => setFilterMode('all')}
+            themeColors={themeColors}
+          />
+          <FilterChip
+            label="All-halal"
+            active={filterMode === 'all-halal'}
+            onPress={() => setFilterMode('all-halal')}
+            themeColors={themeColors}
+          />
+          <FilterChip
+            label="No alcohol"
+            active={filterMode === 'no-alcohol'}
+            onPress={() => setFilterMode('no-alcohol')}
+            themeColors={themeColors}
+          />
+          <FilterChip
+            label="Favourites"
+            active={filterMode === 'favourites'}
+            onPress={() => setFilterMode('favourites')}
+            themeColors={themeColors}
+          />
+        </View>
+        <View
+          style={[
+            styles.mapWrapper,
+            { backgroundColor: themeColors.card, borderColor: themeColors.border },
+          ]}
+        >
+          <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={initialRegion}>
+            {filteredRestaurants.map(restaurant => {
+              const isActive = restaurant.id === selectedId;
+              return (
+                <Marker
+                  key={restaurant.id}
+                  coordinate={{
+                    latitude: restaurant.location.lat,
+                    longitude: restaurant.location.lng,
+                  }}
+                  onPress={() => focusOnRestaurant(restaurant)}
+                >
+                  <View
+                    style={[
+                      styles.markerOuter,
+                      {
+                        borderColor: isActive ? themeColors.accent : themeColors.border,
+                        backgroundColor: themeColors.background,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.markerInner,
+                        {
+                          backgroundColor: isActive ? themeColors.accent : themeColors.textSecondary,
+                        },
+                      ]}
+                    />
+                  </View>
+                </Marker>
+              );
+            })}
+          </MapView>
+        </View>
+        {filteredRestaurants.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+              No restaurants match this filter yet.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredRestaurants}
+            keyExtractor={item => item.id}
+            renderItem={renderLocationCard}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    gap: 16,
+  },
+  headerBlock: {
+    paddingTop: 16,
+    gap: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
-    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 16,
+    lineHeight: 20,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  mapWrapper: {
+    height: 280,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  list: {
+    flex: 1,
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 80,
+    gap: 12,
   },
-  card: {
+  locationCard: {
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    padding: 14,
   },
-  name: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
   },
-  detail: {
-    fontSize: 14,
+  cardSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
-  button: {
+  cardMeta: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  actionsRow: {
     marginTop: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusText: {
+    fontSize: 12,
+  },
+  mapButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  openMapsChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  buttonText: {
-    fontSize: 14,
+  openMapsText: {
+    fontSize: 12,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+  },
+  emptyState: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  markerOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
+
+export default MapScreen;
