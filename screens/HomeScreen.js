@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
@@ -105,22 +113,94 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
 
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const { favourites } = useFavourites();
   const { theme, themeColors } = useThemePreference();
   const isDark = theme === 'dark';
 
+  const applyQuickFilter = mode => {
+    setFilterMode(mode);
+  };
+
   const filteredRestaurants = useMemo(() => {
+    let base = restaurants;
     switch (filterMode) {
       case 'all-halal':
-        return restaurants.filter(r => r.halalInfo?.overallStatus === 'all-halal');
+        base = restaurants.filter(r => r.halalInfo?.overallStatus === 'all-halal');
+        break;
       case 'no-alcohol':
-        return restaurants.filter(r => r.alcoholInfo?.servesAlcohol === false);
+        base = restaurants.filter(r => r.alcoholInfo?.servesAlcohol === false);
+        break;
       case 'favourites':
-        return restaurants.filter(r => favourites.includes(r.id));
+        base = restaurants.filter(r => favourites.includes(r.id));
+        break;
+      case 'burgers':
+        base = restaurants.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const tags = (r.tags || []).map(tag => tag.toLowerCase());
+          return (
+            cuisine.includes('burger') ||
+            cuisine.includes('grill') ||
+            tags.some(tag => tag.includes('burger') || tag.includes('grill'))
+          );
+        });
+        break;
+      case 'chicken':
+        base = restaurants.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          return cuisine.includes('chicken') || cuisine.includes('peri');
+        });
+        break;
+      case 'indian':
+        base = restaurants.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const name = (r.name || '').toLowerCase();
+          return (
+            cuisine.includes('indian') ||
+            cuisine.includes('pakistani') ||
+            name.includes('tandoori') ||
+            name.includes('balti')
+          );
+        });
+        break;
+      case 'pizza':
+        base = restaurants.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          return cuisine.includes('pizza') || cuisine.includes('doner');
+        });
+        break;
+      case 'healthy':
+        base = restaurants.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const tags = (r.tags || []).map(tag => tag.toLowerCase());
+          return (
+            cuisine.includes('salad') ||
+            cuisine.includes('mediterranean') ||
+            tags.some(tag => tag.includes('healthy') || tag.includes('vegan'))
+          );
+        });
+        break;
       default:
-        return restaurants;
+        base = restaurants;
     }
-  }, [filterMode, favourites]);
+
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return base;
+    }
+    return base.filter(r => {
+      const haystack = [
+        r.name || '',
+        r.cuisine || '',
+        r.city || '',
+        r.area || '',
+        ...(r.tags || []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [filterMode, favourites, searchQuery]);
 
   const renderItem = ({ item }) => (
     <RestaurantCard
@@ -140,15 +220,92 @@ export default function HomeScreen({ navigation }) {
         renderItem={renderItem}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: themeColors.textPrimary }]}>HalalWay</Text>
-              <Text style={[styles.subtitle, { color: themeColors.accent }]}>
-                Discover halal restaurants across Dundee & St Andrews.
-              </Text>
-              <Text style={[styles.body, { color: themeColors.textSecondary }]}>
-                Use filters to focus on all-halal venues, alcohol-free spaces, or browse everything
-                verified so far.
-              </Text>
+            <ImageBackground
+              source={{
+                uri: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=60',
+              }}
+              imageStyle={styles.heroImage}
+              style={[
+                styles.heroBanner,
+                { backgroundColor: isDark ? '#1f2933' : '#e2e8f0', borderColor: themeColors.border },
+              ]}
+            >
+              <View style={styles.heroOverlay} />
+              <View style={styles.heroContent}>
+                <Text style={styles.heroKicker}>Find Halal Food Near You 🍽️</Text>
+                <Text style={styles.heroTitle}>Discover trusted places to eat in Dundee & St Andrews.</Text>
+                <Text style={styles.heroBody}>
+                  Filter by cuisine, halal status, or alcohol policy. Tap a category to jump straight into a curated
+                  list.
+                </Text>
+                <TouchableOpacity
+                  style={styles.heroCTA}
+                  onPress={() => navigation.navigate('MapTab')}
+                >
+                  <Text style={styles.heroCTAText}>Explore Map</Text>
+                </TouchableOpacity>
+              </View>
+            </ImageBackground>
+            <View style={styles.quickRow}>
+              {[
+                { label: 'Burgers', emoji: '🍔', mode: 'burgers' },
+                { label: 'Chicken', emoji: '🍗', mode: 'chicken' },
+                { label: 'Indian', emoji: '🍛', mode: 'indian' },
+                { label: 'Pizza', emoji: '🍕', mode: 'pizza' },
+                { label: 'Healthy', emoji: '🥗', mode: 'healthy' },
+                { label: 'No alcohol', emoji: '🕌', mode: 'no-alcohol' },
+              ].map(option => (
+                <TouchableOpacity
+                  key={option.mode}
+                  style={[
+                    styles.quickButton,
+                    {
+                      borderColor: themeColors.border,
+                      backgroundColor: filterMode === option.mode ? themeColors.accent : themeColors.card,
+                    },
+                  ]}
+                  onPress={() => applyQuickFilter(option.mode)}
+                >
+                  <Text
+                    style={[
+                      styles.quickEmoji,
+                      filterMode === option.mode && { color: themeColors.accentContrast },
+                    ]}
+                  >
+                    {option.emoji}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.quickLabel,
+                      { color: filterMode === option.mode ? themeColors.accentContrast : themeColors.textPrimary },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View
+              style={[
+                styles.searchWrapper,
+                { backgroundColor: themeColors.card, borderColor: themeColors.border },
+              ]}
+            >
+              <Text style={[styles.searchIcon, { color: themeColors.muted }]}>🔍</Text>
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search restaurants, cuisines..."
+                placeholderTextColor={themeColors.inputPlaceholder}
+                style={[styles.searchInput, { color: themeColors.textPrimary }]}
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Text style={[styles.clearText, { color: themeColors.accent }]}>Clear</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.filterBar}>
               <FilterChip
@@ -200,6 +357,94 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 12,
+  },
+  heroBanner: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    padding: 20,
+    position: 'relative',
+  },
+  heroImage: {
+    opacity: 0.6,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  heroContent: {
+    gap: 8,
+  },
+  heroKicker: {
+    color: '#facc15',
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  heroBody: {
+    color: '#f8fafc',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  heroCTA: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f97316',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  heroCTAText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickButton: {
+    flexBasis: '30%',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  quickEmoji: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  quickLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchIcon: {
+    fontSize: 18,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  clearText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   title: {
     fontSize: 28,
