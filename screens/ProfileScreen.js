@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
@@ -25,6 +26,47 @@ const ProfileScreen = ({ navigation }) => {
     'HalalWay user';
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const profilePhotoKey = user ? `profilePhoto:${user.uid}` : null;
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPhoto = async () => {
+      if (!profilePhotoKey) {
+        if (isMounted) setProfilePhoto(null);
+        return;
+      }
+      try {
+        const stored = await AsyncStorage.getItem(profilePhotoKey);
+        if (isMounted) {
+          setProfilePhoto(stored);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setProfilePhoto(null);
+        }
+      }
+    };
+    loadPhoto();
+    return () => {
+      isMounted = false;
+    };
+  }, [profilePhotoKey]);
+
+  const persistProfilePhoto = async uri => {
+    if (!profilePhotoKey) {
+      return;
+    }
+    try {
+      if (uri) {
+        await AsyncStorage.setItem(profilePhotoKey, uri);
+      } else {
+        await AsyncStorage.removeItem(profilePhotoKey);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to persist profile photo', error);
+    }
+  };
 
   const pickProfilePhoto = async () => {
     try {
@@ -35,14 +77,16 @@ const ProfileScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets?.length) {
-        setProfilePhoto(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        setProfilePhoto(uri);
+        persistProfilePhoto(uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Unable to pick an image right now. Please try again later.');
@@ -89,24 +133,47 @@ const ProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       </View>
-      <View style={[styles.section, styles.favouritesSection, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
-        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Favourite restaurants</Text>
+      <View
+        style={[
+          styles.section,
+          styles.favouritesSection,
+          { backgroundColor: 'transparent', borderWidth: 0, padding: 0 },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>
+          Favourite restaurants
+        </Text>
         {favouriteRestaurants.length > 0 ? (
-          <TouchableOpacity
-            style={[
-              styles.smallCard,
-              styles.favouriteCard,
-              { backgroundColor: cardBackground, borderColor },
-            ]}
-            onPress={() => Alert.alert('Coming soon', 'Favourites screen coming soon!')}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.favouritesScroll}
           >
-            <Text style={[styles.smallCardValue, { color: primaryText }]}>
-              {favouriteRestaurants.length} saved spot{favouriteRestaurants.length === 1 ? '' : 's'}
-            </Text>
-            <Text style={[styles.smallCardDescription, { color: secondaryText }]}>
-              Tap to view and manage your saved places.
-            </Text>
-          </TouchableOpacity>
+            {favouriteRestaurants.map(restaurant => (
+              <TouchableOpacity
+                key={restaurant.id}
+                style={[
+                  styles.favouritePill,
+                  {
+                    backgroundColor: cardBackground,
+                    borderColor,
+                  },
+                ]}
+                onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: restaurant.id })}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.favouriteTitle, { color: primaryText }]} numberOfLines={1}>
+                  {restaurant.name}
+                </Text>
+                <Text style={[styles.favouriteMeta, { color: secondaryText }]} numberOfLines={1}>
+                  {restaurant.cuisine || 'Restaurant'} · {restaurant.city}
+                </Text>
+                <Text style={[styles.favouriteMeta, { color: secondaryText }]} numberOfLines={1}>
+                  Halal: {restaurant.halalInfo?.overallStatus ?? 'unknown'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         ) : (
           <View style={styles.noFavourites}>
             <Text style={[styles.noFavText, { color: secondaryText }]}>
@@ -312,6 +379,27 @@ const styles = StyleSheet.create({
   },
   noFavText: {
     fontSize: 13,
+  },
+  favouritesScroll: {
+    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  favouritePill: {
+    width: 220,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    marginRight: 12,
+    gap: 4,
+  },
+  favouriteTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  favouriteMeta: {
+    fontSize: 12,
   },
   quickLinks: {
     gap: 12,
