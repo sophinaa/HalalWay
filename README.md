@@ -1,25 +1,27 @@
-# HalalWay (React Native)
+# HalalWay
 
-HalalWay is a mobile app (React Native + Expo) that helps users find halal restaurants across the UK and shows whether they serve alcohol.
+HalalWay is a React Native (Expo) app that helps people find halal food across the UK, showing halal status, alcohol info, distance, reviews, and opening hours, while supporting social interaction and messaging between users.
 
-## Current features (Day 1)
-
-- React Native app created with Expo
-- Bottom tab navigation with three main screens:
-  - Home
-  - Map
-  - Profile
-- Basic placeholder content on each screen describing planned functionality
+## Features
+- Search & discover: find halal restaurants by name, city, or cuisine
+- Live GPS: nearby halal places within 10 miles with live distance updates
+- Restaurant details: halal/alcohol status, hours, service options, reviews
+- Reviews: add text, star ratings, and photos (camera or gallery)
+- Profile: username, favourites, theme switching, profile photo upload
+- Social: follow users, view feed, see what friends rated
+- Messaging: Instagram-style chats and “Send to friend” restaurant sharing
+- Qibla: live-updating Qibla direction using location
 
 ## Tech stack
-
 - React Native (Expo)
-- React Navigation (Bottom Tabs)
-- @expo/vector-icons (MaterialIcons)
+- Firebase Authentication
+- Firestore
+- Expo APIs (Location, ImagePicker, Haptics)
+- AsyncStorage
+- React Navigation
 
-## How to run
-
+## Setup
 ```bash
 npm install
-npm start
+npx expo start
 ```
