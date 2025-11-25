@@ -22,6 +22,9 @@ import LegalScreen from './screens/LegalScreen';
 import SocialScreen from './screens/SocialScreen';
 import PersonProfileScreen from './screens/PersonProfileScreen';
 import { SocialProvider } from './contexts/SocialContext';
+import { MessagesProvider } from './contexts/MessagesContext';
+import MessagesScreen from './screens/MessagesScreen';
+import MessageThreadScreen from './screens/MessageThreadScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -88,6 +91,8 @@ function RootNavigator() {
           <Stack.Screen name="Legal" component={LegalScreen} options={{ title: 'About & terms' }} />
           <Stack.Screen name="Social" component={SocialScreen} options={{ title: 'Social' }} />
           <Stack.Screen name="PersonProfile" component={PersonProfileScreen} options={{ title: 'Profile' }} />
+          <Stack.Screen name="Messages" component={MessagesScreen} options={{ title: 'Messages' }} />
+          <Stack.Screen name="MessageThread" component={MessageThreadScreen} options={{ title: 'Chat' }} />
         </>
       )}
     </Stack.Navigator>
@@ -110,9 +115,11 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <SocialProvider>
-          <FavouritesProvider>
-            <AppNavigator />
-          </FavouritesProvider>
+          <MessagesProvider>
+            <FavouritesProvider>
+              <AppNavigator />
+            </FavouritesProvider>
+          </MessagesProvider>
         </SocialProvider>
       </AuthProvider>
     </ThemeProvider>
