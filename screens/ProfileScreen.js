@@ -11,7 +11,7 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, username } = useAuth();
   const { favourites } = useFavourites();
   const { theme, themeMode, setThemeMode, themeColors } = useThemePreference();
   const useSystemTheme = themeMode === 'system';
@@ -164,6 +164,9 @@ const ProfileScreen = ({ navigation }) => {
       </View>
       <View style={styles.avatarText}>
         <Text style={[styles.profileName, { color: primaryText }]}>{preferredName}</Text>
+        {username ? (
+          <Text style={[styles.profileHandle, { color: secondaryText }]}>@{username}</Text>
+        ) : null}
         <TouchableOpacity
           style={[styles.avatarButton, { backgroundColor: 'transparent' }]}
           onPress={promptForPhotoSource}
@@ -340,6 +343,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  profileHandle: {
+    fontSize: 13,
+    marginTop: 2,
   },
   avatar: {
     width: 120,

@@ -6,12 +6,14 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params;
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
+  const { username: authUsername, user: authUser } = useAuth();
   const { themeColors } = useThemePreference();
   const backgroundColor = themeColors.background;
   const primaryText = themeColors.textPrimary;
@@ -94,9 +96,15 @@ const RestaurantDetailsScreen = ({ route }) => {
     try {
       await Haptics.selectionAsync();
       const trimmed = reviewText.trim();
+      const reviewerName =
+        authUsername ||
+        authUser?.displayName ||
+        authUser?.email?.split('@')[0] ||
+        'You';
+
       const newReview = {
         id: `${Date.now()}`,
-        user: 'You',
+        user: reviewerName,
         text: trimmed || 'No comment provided.',
         rating: reviewRating,
         photo: reviewPhoto || null,

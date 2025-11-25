@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 export default function PersonalDetailsScreen() {
-  const { user, updateDisplayName } = useAuth();
+  const { user, updateDisplayName, username } = useAuth();
   const { themeColors } = useThemePreference();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -83,6 +83,10 @@ export default function PersonalDetailsScreen() {
             {saving ? 'Saving…' : 'Save name'}
           </Text>
         </TouchableOpacity>
+        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Username</Text>
+        <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+          {username ? `@${username}` : 'Not available'}
+        </Text>
         <Text style={[styles.label, { color: themeColors.textSecondary }]}>Email</Text>
         <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.email ?? 'Not available'}</Text>
           <Text style={[styles.label, { color: themeColors.textSecondary }]}>User ID</Text>
