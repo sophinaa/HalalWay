@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useThemePreference } from '../contexts/ThemeContext';
@@ -38,6 +38,7 @@ const FilterChip = ({ label, active, onPress, themeColors }) => (
 );
 
 const MapScreen = () => {
+  const insets = useSafeAreaInsets();
   const { themeColors } = useThemePreference();
   const { favourites } = useFavourites();
   const navigation = useNavigation();
@@ -207,19 +208,19 @@ const MapScreen = () => {
 
   if (restaurantsWithLocation.length === 0) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
+      <View style={[styles.safeArea, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
         <View style={styles.headerBlock}>
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>Halal Map</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
             No restaurants with coordinates available yet.
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
+    <View style={[styles.safeArea, { backgroundColor: themeColors.background, paddingTop: insets.top }]}>
       <View style={styles.container}>
         <View style={styles.headerBlock}>
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>Explore the map</Text>
@@ -418,7 +419,7 @@ const MapScreen = () => {
           )
         ) : null}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 0,
     gap: 16,
   },
   headerBlock: {
@@ -515,7 +516,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: 80,
+    paddingBottom: 0,
     gap: 12,
   },
   locationCard: {

@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +26,18 @@ const ProfileScreen = ({ navigation }) => {
   const { user, logout, username } = useAuth();
   const { favourites } = useFavourites();
   const { followers, following, mutualCount } = useSocial();
-  const { theme, themeMode, setThemeMode, themeColors, themeName, setThemeName } = useThemePreference();
+  const {
+    theme,
+    themeMode,
+    setThemeMode,
+    themeColors,
+    themeName,
+    setThemeName,
+    accessibilityMode,
+    setAccessibilityMode,
+    accessibilityScale,
+    setAccessibilityScale,
+  } = useThemePreference();
   const useSystemTheme = themeMode === 'system';
   const backgroundColor = themeColors.background;
   const cardBackground = themeColors.card;
@@ -272,6 +294,20 @@ const ProfileScreen = ({ navigation }) => {
           Pick a palette and light/dark mode. Your choice is saved to your profile.
         </Text>
         <View style={styles.appearanceRow}>
+          <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>High contrast & large text</Text>
+          <Switch
+            value={accessibilityMode === 'accessible'}
+            onValueChange={value => setAccessibilityMode(value ? 'accessible' : 'standard')}
+            thumbColor={themeColors.card}
+            trackColor={{ false: themeColors.muted, true: themeColors.accent }}
+          />
+        </View>
+        {accessibilityMode === 'accessible' ? (
+          <View style={styles.sliderBlock}>
+            <Text style={[styles.value, { color: primaryText }]}>Text size is enlarged while on.</Text>
+          </View>
+        ) : null}
+        <View style={styles.appearanceRow}>
           <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>Match device theme</Text>
           <Switch
             value={useSystemTheme}
@@ -494,6 +530,9 @@ const styles = StyleSheet.create({
   themeSelectValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   themeSelectValue: { fontSize: 13, fontWeight: '600' },
   themeSelectHint: { fontSize: 12, marginTop: 4 },
+  sliderBlock: { marginTop: 8 },
+  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  sliderValue: { fontSize: 12, fontWeight: '600' },
   themeModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',

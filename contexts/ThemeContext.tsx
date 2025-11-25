@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { ColorSchemeName, useColorScheme } from 'react-native';
+import { ColorSchemeName, Text, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from './AuthContext';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 type ThemeName = 'default' | 'autumn' | 'blush' | 'forest' | 'ocean' | 'amethyst';
+type AccessibilityMode = 'standard' | 'accessible';
 
 type ThemeColors = {
   background: string;
@@ -30,6 +31,9 @@ type ThemeContextValue = {
   themeColors: ThemeColors;
   themeName: ThemeName;
   setThemeName: (name: ThemeName) => void;
+  accessibilityMode: AccessibilityMode;
+  setAccessibilityMode: (mode: AccessibilityMode) => void;
+  textScale: number;
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -229,12 +233,46 @@ const themePalettes: Record<ThemeName, Record<'light' | 'dark', ThemeColors>> = 
   },
 };
 
+const accessiblePalette: Record<'light' | 'dark', ThemeColors> = {
+  light: {
+    background: '#ffffff',
+    card: '#ffffff',
+    border: '#000000',
+    textPrimary: '#000000',
+    textSecondary: '#1f2937',
+    muted: '#111827',
+    accent: '#ffcc00',
+    accentContrast: '#000000',
+    tagBackground: '#ffffff',
+    tagText: '#000000',
+    inputBackground: '#ffffff',
+    inputBorder: '#000000',
+    inputPlaceholder: '#4b5563',
+  },
+  dark: {
+    background: '#000000',
+    card: '#111111',
+    border: '#ffffff',
+    textPrimary: '#ffffff',
+    textSecondary: '#e5e7eb',
+    muted: '#c7c7c7',
+    accent: '#ffcc00',
+    accentContrast: '#000000',
+    tagBackground: '#111111',
+    tagText: '#ffffff',
+    inputBackground: '#111111',
+    inputBorder: '#ffffff',
+    inputPlaceholder: '#c7c7c7',
+  },
+};
+
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const auth = useAuth();
   const userId = auth?.user?.uid;
   const systemScheme = useColorScheme();
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [themeName, setThemeName] = useState<ThemeName>('default');
+  const [accessibilityMode, setAccessibilityMode] = useState<AccessibilityMode>('standard');
   const storageKey = userId ? `theme:${userId}` : 'theme:guest';
 
   useEffect(() => {
@@ -257,6 +295,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           ) {
             setThemeName(parsed.themeName);
           }
+          if (parsed.accessibilityMode === 'accessible' || parsed.accessibilityMode === 'standard') {
+            setAccessibilityMode(parsed.accessibilityMode);
+          }
         }
       } catch {
         // ignore and keep defaults
@@ -271,13 +312,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const persist = async () => {
       try {
-        await AsyncStorage.setItem(storageKey, JSON.stringify({ mode: themeMode, themeName }));
+        await AsyncStorage.setItem(storageKey, JSON.stringify({ mode: themeMode, themeName, accessibilityMode }));
       } catch {
         // best effort only
       }
     };
     persist();
-  }, [themeMode, themeName, storageKey]);
+  }, [themeMode, themeName, accessibilityMode, storageKey]);
 
   const theme = useMemo<Exclude<ColorSchemeName, null>>(() => {
     if (themeMode === 'system') {
@@ -286,11 +327,34 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return themeMode;
   }, [themeMode, systemScheme]);
 
-  const themeColors = themePalettes[themeName][theme];
+  const themeColors =
+    accessibilityMode === 'accessible' ? accessiblePalette[theme] : themePalettes[themeName][theme];
+  const textScale = accessibilityMode === 'accessible' ? 1.1 : 1;
+
+  useEffect(() => {
+    if (accessibilityMode === 'accessible') {
+      Text.defaultProps = Text.defaultProps || {};
+      Text.defaultProps.allowFontScaling = true;
+      Text.defaultProps.maxFontSizeMultiplier = 1.3;
+    } else if (Text.defaultProps) {
+      Text.defaultProps.allowFontScaling = undefined;
+      Text.defaultProps.maxFontSizeMultiplier = undefined;
+    }
+  }, [accessibilityMode]);
 
   const value = useMemo(
-    () => ({ themeMode, theme, setThemeMode, themeColors, themeName, setThemeName }),
-    [themeMode, theme, themeColors, themeName],
+    () => ({
+      themeMode,
+      theme,
+      setThemeMode,
+      themeColors,
+      themeName,
+      setThemeName,
+      accessibilityMode,
+      setAccessibilityMode,
+      textScale,
+    }),
+    [themeMode, theme, themeColors, themeName, accessibilityMode, textScale],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

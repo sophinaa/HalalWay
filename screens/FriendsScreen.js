@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { useSocial } from '../contexts/SocialContext';
@@ -35,6 +35,7 @@ const sampleVisits = {
 };
 
 const FriendsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { themeColors } = useThemePreference();
   const { following } = useSocial();
   const backgroundColor = themeColors.background;
@@ -67,7 +68,7 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+    <View style={[styles.safeArea, { backgroundColor, paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: primaryText }]}>Feed</Text>
         <TouchableOpacity
@@ -113,7 +114,7 @@ const FriendsScreen = ({ navigation }) => {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: { padding: 16, paddingBottom: 32, gap: 12 },
+  content: { padding: 16, paddingBottom: 0, gap: 12 },
   friendCard: {
     borderWidth: 1,
     borderRadius: 16,
