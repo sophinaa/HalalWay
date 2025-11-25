@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useFavourites } from '../contexts/FavouritesContext';
@@ -40,6 +41,15 @@ const RestaurantDetailsScreen = ({ route }) => {
     priceRange,
   } = restaurant;
 
+  const toggleFavourite = async () => {
+    await Haptics.selectionAsync();
+    if (favourite) {
+      removeFavourite(restaurantId);
+    } else {
+      addFavourite(restaurantId);
+    }
+  };
+
   return (
     <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={styles.content}>
       <Text style={[styles.name, { color: primaryText }]}>{name}</Text>
@@ -56,7 +66,7 @@ const RestaurantDetailsScreen = ({ route }) => {
       </Text>
 
       <TouchableOpacity
-        onPress={() => (favourite ? removeFavourite(restaurantId) : addFavourite(restaurantId))}
+        onPress={toggleFavourite}
         style={[
           styles.favButton,
           { backgroundColor: favourite ? '#dc2626' : themeColors.accent },

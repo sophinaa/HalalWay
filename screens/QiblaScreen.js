@@ -19,6 +19,7 @@ export default function QiblaScreen() {
 
   useEffect(() => {
     let isMounted = true;
+    let locationWatcher;
     const loadLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -36,15 +37,34 @@ export default function QiblaScreen() {
             lng: position.coords.longitude,
           });
         }
+        locationWatcher = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 50,
+          },
+          pos => {
+            if (isMounted && pos?.coords) {
+              setCoords({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              });
+            }
+          },
+        );
       } catch (err) {
         if (isMounted) {
           setError('Unable to read location. Using Dundee as a fallback.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
     };
     loadLocation();
     return () => {
       isMounted = false;
+      locationWatcher?.remove?.();
     };
   }, []);
 

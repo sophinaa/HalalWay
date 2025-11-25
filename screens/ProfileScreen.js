@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -126,6 +127,11 @@ const ProfileScreen = ({ navigation }) => {
     ]);
   };
 
+  const handleThemeChange = async nextMode => {
+    await Haptics.selectionAsync();
+    setThemeMode(nextMode);
+  };
+
   if (!user) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
@@ -221,7 +227,7 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>Match device theme</Text>
           <Switch
             value={useSystemTheme}
-            onValueChange={value => setThemeMode(value ? 'system' : theme)}
+            onValueChange={value => handleThemeChange(value ? 'system' : theme)}
             thumbColor={themeColors.card}
             trackColor={{ false: themeColors.muted, true: themeColors.accent }}
           />
@@ -238,7 +244,7 @@ const ProfileScreen = ({ navigation }) => {
                     backgroundColor: themeMode === mode ? themeColors.accent : cardBackground,
                   },
                 ]}
-                onPress={() => setThemeMode(mode)}
+                onPress={() => handleThemeChange(mode)}
               >
                 <Text
                   style={[
