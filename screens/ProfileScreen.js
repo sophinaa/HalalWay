@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as MediaLibrary from 'expo-media-library';
+import { Image as ExpoImage } from 'expo-image';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
@@ -30,6 +32,8 @@ const ProfileScreen = ({ navigation }) => {
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
   const [profilePhoto, setProfilePhoto] = useState(null);
   const profilePhotoKey = user ? `profilePhoto:${user.uid}` : null;
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,9 +75,22 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handlePhotoResult = result => {
+  const handlePhotoResult = async result => {
     if (!result?.canceled && result.assets?.length) {
-      const uri = result.assets[0].uri;
+      const asset = result.assets[0];
+      let uri = asset.uri || asset.localUri;
+      if (!uri && asset.assetId) {
+        try {
+          const info = await MediaLibrary.getAssetInfoAsync(asset.assetId);
+          uri = info.localUri || info.uri;
+        } catch {
+          // ignore
+        }
+      }
+      if (!uri) {
+        Alert.alert('Error', 'Could not load the selected photo. Please try again.');
+        return;
+      }
       setProfilePhoto(uri);
       persistProfilePhoto(uri);
     }
@@ -89,13 +106,13 @@ const ProfileScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
-      handlePhotoResult(result);
+      await handlePhotoResult(result);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn('Failed to pick profile photo', error);
@@ -117,13 +134,13 @@ const ProfileScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
-      handlePhotoResult(result);
+      await handlePhotoResult(result);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn('Failed to take profile photo', error);
@@ -142,6 +159,37 @@ const ProfileScreen = ({ navigation }) => {
   const handleThemeChange = async nextMode => {
     await Haptics.selectionAsync();
     setThemeMode(nextMode);
+  };
+
+  const openPhotoModal = () => {
+    if (profilePhoto) {
+      setPhotoModalVisible(true);
+    }
+  };
+
+  const closePhotoModal = () => setPhotoModalVisible(false);
+
+  const savePhotoToLibrary = async () => {
+    if (!profilePhoto) return;
+    try {
+      setSavingPhoto(true);
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      let finalStatus = status;
+      if (status !== 'granted') {
+        const request = await MediaLibrary.requestPermissionsAsync();
+        finalStatus = request.status;
+      }
+      if (finalStatus !== 'granted') {
+        Alert.alert('Permission required', 'Please allow photo access to save your profile picture.');
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(profilePhoto);
+      Alert.alert('Saved', 'Profile photo saved to your camera roll.');
+    } catch (error) {
+      Alert.alert('Error', 'Unable to save the photo right now.');
+    } finally {
+      setSavingPhoto(false);
+    }
   };
 
   if (!user) {
@@ -168,7 +216,17 @@ const ProfileScreen = ({ navigation }) => {
           ]}
         >
           {profilePhoto ? (
-            <Image source={{ uri: profilePhoto }} style={styles.avatarImage} />
+            <TouchableOpacity onPress={openPhotoModal} activeOpacity={0.85}>
+              <ExpoImage
+                source={{ uri: profilePhoto }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                onError={() => {
+                  Alert.alert('Image error', 'Could not load your photo. Please try again.');
+                  setProfilePhoto(null);
+                }}
+              />
+            </TouchableOpacity>
           ) : (
             <Text style={[styles.avatarPlaceholder, { color: themeColors.textSecondary }]}>Add photo</Text>
           )}
@@ -341,6 +399,41 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={[styles.logoutText, { color: secondaryText }]}>Log out</Text>
       </TouchableOpacity>
       </ScrollView>
+      <Modal
+        visible={photoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closePhotoModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: cardBackground, borderColor }]}>
+            {profilePhoto ? (
+              <ExpoImage
+                source={{ uri: profilePhoto }}
+                style={styles.modalImage}
+                contentFit="contain"
+                onError={() => {
+                  Alert.alert('Image error', 'Could not load your photo preview.');
+                }}
+              />
+            ) : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: themeColors.accent }]}
+                onPress={savePhotoToLibrary}
+                disabled={savingPhoto}
+              >
+                <Text style={[styles.modalButtonText, { color: themeColors.accentContrast }]}>
+                  {savingPhoto ? 'Saving...' : 'Save to camera roll'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: 'transparent', borderColor }]} onPress={closePhotoModal}>
+                <Text style={[styles.modalButtonText, { color: primaryText }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -576,6 +669,41 @@ const styles = StyleSheet.create({
   },
   appearanceSection: {
     marginTop: 24,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxHeight: '85%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: 320,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  modalActions: {
+    width: '100%',
+    gap: 10,
+  },
+  modalButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontWeight: '700',
   },
 });
 

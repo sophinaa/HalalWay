@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,12 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import restaurants from '../data/dundeeStAndrewsRestaurants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
+import { useSocial } from '../contexts/SocialContext';
+import { useMessages } from '../contexts/MessagesContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params;
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
   const { username: authUsername, user: authUser } = useAuth();
+  const { mutualIds, following } = useSocial();
+  const { sendMessage } = useMessages();
   const { themeColors } = useThemePreference();
   const backgroundColor = themeColors.background;
   const primaryText = themeColors.textPrimary;
@@ -26,8 +30,13 @@ const RestaurantDetailsScreen = ({ route }) => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewPhoto, setReviewPhoto] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const restaurant = useMemo(() => restaurants.find(r => r.id === restaurantId), [restaurantId]);
+  const mutuals = useMemo(() => {
+    const ids = new Set(mutualIds);
+    return following.filter(f => ids.has(f.id));
+  }, [following, mutualIds]);
 
   const reviewsStorageKey = `restaurantReviews:${restaurantId}`;
 
@@ -68,6 +77,24 @@ const RestaurantDetailsScreen = ({ route }) => {
     } catch {
       // ignore for now
     }
+  };
+
+  const openShareModal = () => {
+    if (mutuals.length === 0) {
+      Alert.alert('No mutuals yet', 'Add some friends first to share restaurants.');
+      return;
+    }
+    setShareModalVisible(true);
+  };
+
+  const closeShareModal = () => setShareModalVisible(false);
+
+  const sendToFriend = friend => {
+    if (!friend) return;
+    const message = `Check out ${restaurant?.name ?? 'this restaurant'} in ${restaurant?.city ?? ''}!`;
+    sendMessage(friend.id, message);
+    Alert.alert('Sent', `Shared with ${friend.name}.`);
+    setShareModalVisible(false);
   };
 
   const handlePickPhoto = async () => {
@@ -290,17 +317,25 @@ const RestaurantDetailsScreen = ({ route }) => {
           : distanceError || 'Distance unavailable'}
       </Text>
 
-      <TouchableOpacity
-        onPress={toggleFavourite}
-        style={[
-          styles.favButton,
-          { backgroundColor: favourite ? '#dc2626' : themeColors.accent },
-        ]}
-      >
-        <Text style={[styles.favButtonText, { color: themeColors.accentContrast }]}>
-          {favourite ? 'Remove from favourites' : 'Add to favourites ⭐'}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          onPress={toggleFavourite}
+          style={[
+            styles.favButton,
+            { backgroundColor: favourite ? '#dc2626' : themeColors.accent },
+          ]}
+        >
+          <Text style={[styles.favButtonText, { color: themeColors.accentContrast }]}>
+            {favourite ? 'Remove favourite' : 'Save ⭐'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={openShareModal}
+          style={[styles.shareButton, { borderColor: themeColors.border }]}
+        >
+          <Text style={[styles.shareButtonText, { color: themeColors.accent }]}>Send to friend</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: primaryText }]}>Halal & Alcohol</Text>
@@ -443,6 +478,38 @@ const RestaurantDetailsScreen = ({ route }) => {
           ))
         )}
       </View>
+
+      <Modal visible={shareModalVisible} transparent animationType="fade" onRequestClose={closeShareModal}>
+        <View style={styles.shareBackdrop}>
+          <View style={[styles.shareCard, { backgroundColor: backgroundColor, borderColor: themeColors.border }]}>
+            <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Send to a friend</Text>
+            <ScrollView contentContainerStyle={styles.shareList} showsVerticalScrollIndicator={false}>
+              {mutuals.map(person => (
+                <TouchableOpacity
+                  key={person.id}
+                  style={[styles.shareRow, { borderColor: themeColors.border }]}
+                  onPress={() => sendToFriend(person)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.shareAvatar, { backgroundColor: themeColors.tagBackground }]}>
+                    <Text style={[styles.shareAvatarText, { color: primaryText }]}>
+                      {initialsForName(person.name)}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.shareName, { color: primaryText }]}>{person.name}</Text>
+                    <Text style={[styles.shareHandle, { color: secondaryText }]}>@{person.handle}</Text>
+                  </View>
+                  <Text style={[styles.shareSend, { color: themeColors.accent }]}>Send</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.closeShare, { borderColor: themeColors.border }]} onPress={closeShareModal}>
+              <Text style={[styles.shareButtonText, { color: primaryText }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -459,15 +526,30 @@ const styles = StyleSheet.create({
   reviewNote: { fontSize: 12, marginTop: 4 },
   favButton: {
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     alignSelf: 'flex-start',
     marginBottom: 8,
+    flex: 1,
   },
   favButtonText: {
     fontWeight: '600',
     fontSize: 14,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  shareButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareButtonText: { fontWeight: '700', fontSize: 13 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   star: { fontSize: 18, marginHorizontal: 2 },
   starRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
@@ -527,6 +609,47 @@ const styles = StyleSheet.create({
   photoPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   photoPreview: { width: 80, height: 60, borderRadius: 8 },
   clearPhoto: { fontSize: 13, fontWeight: '600' },
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  shareCard: {
+    width: '100%',
+    maxHeight: '70%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  shareList: { gap: 8 },
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 10,
+  },
+  shareAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareAvatarText: { fontWeight: '700' },
+  shareName: { fontWeight: '700' },
+  shareHandle: { fontSize: 12 },
+  shareSend: { fontWeight: '700', fontSize: 13 },
+  closeShare: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
 });
 
 export default RestaurantDetailsScreen;

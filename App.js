@@ -12,6 +12,7 @@ import LoginScreen from './screens/LoginScreen';
 import MapScreen from './screens/MapScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import QiblaScreen from './screens/QiblaScreen';
+import FriendsScreen from './screens/FriendsScreen';
 import RestaurantDetailsScreen from './screens/RestaurantDetailsScreen';
 import SuggestRestaurantScreen from './screens/SuggestRestaurantScreen';
 import SupportScreen from './screens/SupportScreen';
@@ -46,6 +47,7 @@ function MainTabs() {
             HomeTab: 'home',
             MapTab: 'map',
             QiblaTab: 'explore',
+            FriendsTab: 'group',
             ProfileTab: 'person',
           };
           return <MaterialIcons name={iconMap[route.name] ?? 'trip-origin'} size={size} color={color} />;
@@ -55,6 +57,7 @@ function MainTabs() {
       <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="MapTab" component={MapScreen} options={{ title: 'Map' }} />
       <Tab.Screen name="QiblaTab" component={QiblaScreen} options={{ title: 'Qibla' }} />
+      <Tab.Screen name="FriendsTab" component={FriendsScreen} options={{ title: 'Friends' }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );

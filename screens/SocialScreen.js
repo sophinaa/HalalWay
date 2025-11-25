@@ -97,7 +97,16 @@ const SocialScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: primaryText }]}>Social</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: primaryText }]}>Social</Text>
+          <TouchableOpacity
+            style={[styles.messagesButton, { borderColor, backgroundColor: themeColors.card }]}
+            onPress={() => navigation.navigate('Messages')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.messagesButtonText, { color: themeColors.accent }]}>Messages</Text>
+          </TouchableOpacity>
+        </View>
         <View style={[styles.statsCard, { backgroundColor: cardBackground, borderColor }]}>
           {stats.map(stat => (
             <View key={stat.label} style={styles.statItem}>
@@ -216,6 +225,14 @@ const styles = StyleSheet.create({
   },
   statLabel: { fontSize: 13, fontWeight: '600' },
   statValue: { fontSize: 20, fontWeight: '700' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  messagesButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  messagesButtonText: { fontWeight: '700', fontSize: 13 },
   tabs: {
     flexDirection: 'row',
     borderWidth: 1,

@@ -123,6 +123,7 @@ export const SocialProvider = ({ children }) => {
     followBack,
     isFollowing,
     mutualCount: mutualIds.length,
+    mutualIds,
   };
 
   return <SocialContext.Provider value={value}>{children}</SocialContext.Provider>;
