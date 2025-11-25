@@ -87,6 +87,9 @@ export const SocialProvider = ({ children }) => {
     setAndPersist(prev => ({
       ...prev,
       following: prev.following.filter(p => p.id !== personId),
+      suggested: prev.suggested.some(p => p.id === personId)
+        ? prev.suggested
+        : [...prev.suggested, prev.following.find(p => p.id === personId)].filter(Boolean),
     }));
   };
 

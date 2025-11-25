@@ -12,7 +12,7 @@ const initialsForName = name => {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
-const SocialScreen = () => {
+const SocialScreen = ({ navigation }) => {
   const { themeColors } = useThemePreference();
   const { followers, following, suggested, followBack, followUser, unfollowUser, isFollowing, mutualCount } =
     useSocial();
@@ -35,9 +35,11 @@ const SocialScreen = () => {
   const renderPerson = (person, { actionLabel, action, status }) => {
     const meta = [person.handle ? `@${person.handle}` : null, person.city].filter(Boolean).join(' · ');
     return (
-      <View
+      <TouchableOpacity
         key={person.id}
         style={[styles.personCard, { backgroundColor: cardBackground, borderColor }]}
+        onPress={() => navigation.navigate('PersonProfile', { personId: person.id })}
+        activeOpacity={0.85}
       >
         <View style={styles.personMeta}>
           <View style={[styles.avatar, { backgroundColor: themeColors.tagBackground }]}>
@@ -61,14 +63,17 @@ const SocialScreen = () => {
         {action ? (
           <TouchableOpacity
             style={[styles.actionButton, { borderColor, backgroundColor: themeColors.accent }]}
-            onPress={action}
+            onPress={e => {
+              e.stopPropagation();
+              action();
+            }}
           >
             <Text style={[styles.actionButtonText, { color: themeColors.accentContrast }]}>
               {actionLabel}
             </Text>
           </TouchableOpacity>
         ) : null}
-      </View>
+      </TouchableOpacity>
     );
   };
 

@@ -242,9 +242,11 @@ const ProfileScreen = ({ navigation }) => {
             const mutual = isFollowing(person.id) && followers.some(f => f.id === person.id);
             const followsYou = followers.some(f => f.id === person.id);
             return (
-              <View
+              <TouchableOpacity
                 key={person.id}
                 style={[styles.socialPill, { borderColor, backgroundColor: themeColors.tagBackground }]}
+                onPress={() => navigation.navigate('PersonProfile', { personId: person.id })}
+                activeOpacity={0.85}
               >
                 <View style={[styles.socialAvatar, { backgroundColor: cardBackground }]}>
                   <Text style={[styles.socialAvatarText, { color: primaryText }]}>
@@ -260,7 +262,7 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={[styles.socialStatus, { color: mutual ? themeColors.accent : secondaryText }]}>
                   {mutual ? 'Mutual' : followsYou ? 'Follows you' : 'You follow'}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
           {nextFollowerToAddBack ? (

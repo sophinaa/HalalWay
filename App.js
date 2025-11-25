@@ -20,6 +20,7 @@ import PersonalDetailsScreen from './screens/PersonalDetailsScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import LegalScreen from './screens/LegalScreen';
 import SocialScreen from './screens/SocialScreen';
+import PersonProfileScreen from './screens/PersonProfileScreen';
 import { SocialProvider } from './contexts/SocialContext';
 
 const Stack = createNativeStackNavigator();
@@ -86,6 +87,7 @@ function RootNavigator() {
           />
           <Stack.Screen name="Legal" component={LegalScreen} options={{ title: 'About & terms' }} />
           <Stack.Screen name="Social" component={SocialScreen} options={{ title: 'Social' }} />
+          <Stack.Screen name="PersonProfile" component={PersonProfileScreen} options={{ title: 'Profile' }} />
         </>
       )}
     </Stack.Navigator>
