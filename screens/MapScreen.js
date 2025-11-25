@@ -43,12 +43,15 @@ const MapScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const mapRef = useRef(null);
+  const bottomListViewability = useRef({ itemVisiblePercentThreshold: 60 });
 
   const restaurantsWithLocation = useMemo(
     () => restaurants.filter(r => r?.location?.lat != null && r?.location?.lng != null),
     [],
   );
   const [filterMode, setFilterMode] = useState('all');
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [showBottomList, setShowBottomList] = useState(false);
   const filteredRestaurants = useMemo(() => {
     switch (filterMode) {
       case 'all-halal':
@@ -67,6 +70,10 @@ const MapScreen = () => {
     filteredRestaurants.find(r => r.id === selectedId) ??
     filteredRestaurants[0] ??
     restaurantsWithLocation[0];
+  const carouselData = useMemo(
+    () => [{ id: 'map-only', mapOnly: true }, ...filteredRestaurants],
+    [filteredRestaurants],
+  );
 
   const initialRegion =
     selectedRestaurant && selectedRestaurant.location
@@ -93,6 +100,15 @@ const MapScreen = () => {
       mapRef.current?.animateToRegion(region, 500);
     });
   }, []);
+  const handleViewableItemsChanged = useCallback(
+    ({ viewableItems }) => {
+      const firstRestaurant = viewableItems?.find(v => v.item && !v.item.mapOnly)?.item;
+      if (firstRestaurant) {
+        focusOnRestaurant(firstRestaurant);
+      }
+    },
+    [focusOnRestaurant],
+  );
 
   useEffect(() => {
     if (filteredRestaurants.length === 0) {
@@ -241,6 +257,7 @@ const MapScreen = () => {
         <View
           style={[
             styles.mapWrapper,
+            mapExpanded && styles.mapExpanded,
             { backgroundColor: themeColors.card, borderColor: themeColors.border },
           ]}
         >
@@ -278,23 +295,128 @@ const MapScreen = () => {
               );
             })}
           </MapView>
-        </View>
-        {filteredRestaurants.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-              No restaurants match this filter yet.
+          <TouchableOpacity
+            style={[
+              styles.mapToggle,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
+            activeOpacity={0.85}
+            onPress={() =>
+              setMapExpanded(prev => {
+                const next = !prev;
+                if (next) setShowBottomList(false);
+                return next;
+              })
+            }
+          >
+            <Text style={[styles.mapToggleText, { color: themeColors.textPrimary }]}>
+              {mapExpanded ? 'Collapse map' : 'Expand map'}
             </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredRestaurants}
-            keyExtractor={item => item.id}
-            renderItem={renderLocationCard}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+          </TouchableOpacity>
+          {mapExpanded && !showBottomList && filteredRestaurants.length > 0 ? (
+            <TouchableOpacity
+              style={[
+                styles.showOptionsButton,
+                { backgroundColor: themeColors.card, borderColor: themeColors.border },
+              ]}
+              onPress={() => setShowBottomList(true)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.showOptionsText, { color: themeColors.textPrimary }]}>Show options</Text>
+            </TouchableOpacity>
+          ) : null}
+          {mapExpanded && filteredRestaurants.length > 0 && showBottomList ? (
+            <View
+              style={[
+                styles.bottomCarousel,
+                {
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
+              <FlatList
+                data={carouselData}
+                keyExtractor={item => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bottomListContent}
+                renderItem={({ item }) => {
+                  if (item.mapOnly) {
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.bottomCard,
+                          styles.mapOnlyCard,
+                          {
+                            borderColor: themeColors.border,
+                            backgroundColor: themeColors.background,
+                          },
+                        ]}
+                        onPress={() => setShowBottomList(false)}
+                        activeOpacity={0.9}
+                      >
+                        <Text style={[styles.bottomCardTitle, { color: themeColors.textPrimary }]}>
+                          View full map
+                        </Text>
+                        <Text style={[styles.bottomCardMeta, { color: themeColors.textSecondary }]}>
+                          Hide options to see the whole map
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  const active = item.id === selectedId;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.bottomCard,
+                        {
+                          borderColor: active ? themeColors.accent : themeColors.border,
+                          backgroundColor: themeColors.background,
+                        },
+                      ]}
+                      onPress={() => focusOnRestaurant(item)}
+                      activeOpacity={0.9}
+                    >
+                      <Text style={[styles.bottomCardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={[styles.bottomCardMeta, { color: themeColors.textSecondary }]} numberOfLines={1}>
+                        {item.cuisine || 'Restaurant'} · {item.city}
+                      </Text>
+                      <Text style={[styles.bottomCardMeta, { color: themeColors.muted }]} numberOfLines={1}>
+                        Halal: {item.halalInfo?.overallStatus ?? 'unknown'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+                onViewableItemsChanged={handleViewableItemsChanged}
+                viewabilityConfig={bottomListViewability.current}
+              />
+            </View>
+          ) : null}
+        </View>
+        {!mapExpanded ? (
+          filteredRestaurants.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                No restaurants match this filter yet.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredRestaurants}
+              keyExtractor={item => item.id}
+              renderItem={renderLocationCard}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -332,6 +454,62 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
+  },
+  mapExpanded: {
+    flex: 1,
+    height: undefined,
+  },
+  bottomCarousel: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  bottomListContent: {
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  bottomCard: {
+    width: 220,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  bottomCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  bottomCardMeta: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  showOptionsButton: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  showOptionsText: { fontSize: 12, fontWeight: '700' },
+  mapOnlyCard: {
+    borderStyle: 'dashed',
   },
   list: {
     flex: 1,
@@ -407,6 +585,19 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  mapToggle: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  mapToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

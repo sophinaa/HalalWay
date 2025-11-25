@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ const ProfileScreen = ({ navigation }) => {
   const { user, logout, username } = useAuth();
   const { favourites } = useFavourites();
   const { followers, following, mutualCount } = useSocial();
-  const { theme, themeMode, setThemeMode, themeColors } = useThemePreference();
+  const { theme, themeMode, setThemeMode, themeColors, themeName, setThemeName } = useThemePreference();
   const useSystemTheme = themeMode === 'system';
   const backgroundColor = themeColors.background;
   const cardBackground = themeColors.card;
@@ -36,6 +36,15 @@ const ProfileScreen = ({ navigation }) => {
   };
   const [avatarUri, setAvatarUri] = useState(null);
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
+  const themeChoices = [
+    { key: 'default', label: 'Original', swatch: ['#3a5974', '#f8fafc'] },
+    { key: 'autumn', label: 'Autumn', swatch: ['#5c1f28', '#d8b7a0'] },
+    { key: 'blush', label: 'Blush', swatch: ['#f7dce5', '#4a1c2a'] },
+    { key: 'forest', label: 'Forest', swatch: ['#99ce63', '#243b2c'] },
+    { key: 'ocean', label: 'Ocean', swatch: ['#2f5388', '#c8f1ff'] },
+    { key: 'amethyst', label: 'Amethyst', swatch: ['#9d4edd', '#10002b'] },
+  ];
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -257,8 +266,11 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         )}
       </View>
-      <View style={[styles.section, styles.appearanceSection, { backgroundColor: 'transparent', borderWidth: 0, padding: 0 }]}>
-        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Appearance</Text>
+      <View style={[styles.section, styles.themeSection, { backgroundColor: cardBackground, borderColor }]}>
+        <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left' }]}>Themes</Text>
+        <Text style={[styles.sectionHint, { color: secondaryText }]}>
+          Pick a palette and light/dark mode. Your choice is saved to your profile.
+        </Text>
         <View style={styles.appearanceRow}>
           <Text style={[styles.value, { color: primaryText, textAlign: 'left' }]}>Match device theme</Text>
           <Switch
@@ -294,6 +306,88 @@ const ProfileScreen = ({ navigation }) => {
             ))}
           </View>
         )}
+        <TouchableOpacity
+          style={[
+            styles.themeSelectButton,
+            { borderColor, backgroundColor: themeColors.card },
+          ]}
+          onPress={() => setThemePickerOpen(true)}
+          activeOpacity={0.9}
+          >
+            <Text style={[styles.themeSelectLabel, { color: primaryText }]}>Theme</Text>
+            <View style={styles.themeSelectValueRow}>
+              <View style={styles.swatchRow}>
+                {(themeChoices.find(choice => choice.key === themeName)?.swatch ?? []).map(color => (
+                <View key={color} style={[styles.swatchDot, { backgroundColor: color }]} />
+              ))}
+            </View>
+              <Text style={[styles.themeSelectValue, { color: secondaryText }]}>
+                {themeChoices.find(choice => choice.key === themeName)?.label ?? 'Choose'}
+              </Text>
+            </View>
+            <Text style={[styles.themeSelectHint, { color: secondaryText }]}>
+              Pick a palette for buttons, cards, and tags.
+            </Text>
+          </TouchableOpacity>
+        <Modal
+          visible={themePickerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setThemePickerOpen(false)}
+        >
+          <View style={styles.themeModalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setThemePickerOpen(false)} />
+            <View style={[styles.themeModalCard, { backgroundColor: cardBackground, borderColor }]}>
+              <Text style={[styles.sheetTitle, { color: primaryText }]}>Select theme</Text>
+              <Text style={[styles.sheetSubtitle, { color: secondaryText }]}>Tap a theme to apply instantly.</Text>
+              <ScrollView
+                style={styles.themeOptionScroll}
+                contentContainerStyle={styles.themeOptionList}
+                showsVerticalScrollIndicator={false}
+              >
+                {themeChoices.map(choice => {
+                  const active = choice.key === themeName;
+                  return (
+                    <TouchableOpacity
+                      key={choice.key}
+                      style={[
+                        styles.themeOption,
+                        {
+                          borderColor: active ? themeColors.accent : borderColor,
+                          backgroundColor: active ? themeColors.tagBackground : themeColors.card,
+                        },
+                      ]}
+                      onPress={() => {
+                        setThemeName(choice.key);
+                        setThemePickerOpen(false);
+                      }}
+                      activeOpacity={0.9}
+                    >
+                      <View style={styles.swatchRow}>
+                        {choice.swatch.map(color => (
+                          <View key={color} style={[styles.swatchDot, { backgroundColor: color }]} />
+                        ))}
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={[styles.themeOptionLabel, { color: primaryText }]}>{choice.label}</Text>
+                        {active ? (
+                          <Text style={[styles.themeOptionActive, { color: themeColors.accent }]}>Selected</Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.closeSheetButton, { backgroundColor: themeColors.accent }]}
+                onPress={() => setThemePickerOpen(false)}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.closeSheetText, { color: themeColors.accentContrast }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
 
       <View style={styles.quickLinks}>
@@ -373,6 +467,67 @@ const styles = StyleSheet.create({
   themeButtonText: {
     fontWeight: '600',
   },
+  sectionHint: { fontSize: 12, marginBottom: 8 },
+  swatchRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  swatchDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#ffffff33',
+  },
+  themePaletteLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  themeSelectButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  themeSelectLabel: { fontSize: 13, fontWeight: '700' },
+  themeSelectValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  themeSelectValue: { fontSize: 13, fontWeight: '600' },
+  themeSelectHint: { fontSize: 12, marginTop: 4 },
+  themeModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  themeModalCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    paddingBottom: 72,
+  },
+  themeOptionScroll: { maxHeight: 360 },
+  themeOptionList: { gap: 8, marginTop: 8 },
+  themeOption: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  themeOptionLabel: { fontWeight: '700', fontSize: 13 },
+  themeOptionActive: { fontSize: 12, marginTop: 2 },
+  closeSheetButton: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  closeSheetText: { fontWeight: '700', fontSize: 14 },
   avatarSection: {
     alignItems: 'center',
     marginBottom: 24,
