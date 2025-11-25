@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,33 +27,6 @@ const formatHalalStatus = status => {
     .map(word => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ''))
     .join(' ');
 };
-
-const FilterChip = ({ label, active, onPress, themeColors }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[
-      styles.chip,
-      {
-        backgroundColor: themeColors.tagBackground,
-        borderColor: themeColors.border,
-      },
-      active && {
-        backgroundColor: themeColors.accent,
-        borderColor: themeColors.accent,
-      },
-    ]}
-  >
-    <Text
-      style={[
-        styles.chipText,
-        { color: themeColors.textSecondary },
-        active && { color: themeColors.accentContrast },
-      ]}
-    >
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
 
 const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
   const colors = themeColors ?? {};
@@ -136,6 +111,7 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
 
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationLabel, setLocationLabel] = useState('Detecting location...');
   const [locationError, setLocationError] = useState(null);
@@ -145,6 +121,26 @@ export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { favourites } = useFavourites();
   const { theme, themeColors } = useThemePreference();
+  const filterOptions = useMemo(
+    () => [
+      { label: 'All', value: 'all', description: 'Show everything nearby' },
+      { label: 'All-halal', value: 'all-halal', description: 'Only fully halal spots' },
+      { label: 'Halal-friendly', value: 'halal-friendly', description: 'Mostly halal menus' },
+      { label: 'Partial halal', value: 'partial-halal', description: 'Mixed kitchens with clear halal options' },
+      { label: 'Mixed', value: 'mixed', description: 'Venues with both halal and non-halal' },
+      { label: 'No alcohol', value: 'no-alcohol', description: 'Places that do not serve alcohol' },
+      { label: 'No pork', value: 'no-pork', description: 'Exclude venues serving pork' },
+      { label: 'Indian', value: 'indian', description: 'Curries, biryani, and grills' },
+      { label: 'Desserts', value: 'desserts', description: 'Dessert bars, bakeries, and sweet spots' },
+      { label: 'Arab/Middle Eastern', value: 'arab', description: 'Lebanese, Turkish, Syrian, and similar' },
+      { label: 'Favourites', value: 'favourites', description: 'Your saved restaurants' },
+    ],
+    [],
+  );
+  const currentFilterLabel = useMemo(
+    () => filterOptions.find(option => option.value === filterMode)?.label || 'All',
+    [filterMode, filterOptions],
+  );
   const preferredName =
     (user?.displayName && user.displayName.trim()) ||
     user?.email?.split('@')[0] ||
@@ -245,8 +241,9 @@ export default function HomeScreen({ navigation }) {
     };
   }, []);
 
-  const applyQuickFilter = mode => {
-    setFilterMode(mode);
+  const applyFilter = value => {
+    setFilterMode(value);
+    setFiltersOpen(false);
   };
 
   const distanceMiles = (a, b) => {
@@ -286,8 +283,59 @@ export default function HomeScreen({ navigation }) {
       case 'all-halal':
         base = base.filter(r => r.halalInfo?.overallStatus === 'all-halal');
         break;
+      case 'halal-friendly':
+        base = base.filter(r => r.halalInfo?.overallStatus === 'halal-friendly');
+        break;
+      case 'partial-halal':
+        base = base.filter(r => r.halalInfo?.overallStatus === 'partial-halal');
+        break;
+      case 'mixed':
+        base = base.filter(r => r.halalInfo?.overallStatus === 'mixed');
+        break;
       case 'no-alcohol':
         base = base.filter(r => r.alcoholInfo?.servesAlcohol === false);
+        break;
+      case 'no-pork':
+        base = base.filter(r => r.halalInfo?.porkServed === false);
+        break;
+      case 'indian':
+        base = base.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const name = (r.name || '').toLowerCase();
+          return (
+            cuisine.includes('indian') ||
+            cuisine.includes('pakistani') ||
+            name.includes('tandoori') ||
+            name.includes('balti')
+          );
+        });
+        break;
+      case 'desserts':
+        base = base.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const tags = (r.tags || []).map(tag => tag.toLowerCase());
+          return (
+            cuisine.includes('dessert') ||
+            cuisine.includes('sweet') ||
+            cuisine.includes('bakery') ||
+            tags.some(tag => tag.includes('dessert') || tag.includes('sweet') || tag.includes('cake'))
+          );
+        });
+        break;
+      case 'arab':
+        base = base.filter(r => {
+          const cuisine = (r.cuisine || '').toLowerCase();
+          const tags = (r.tags || []).map(tag => tag.toLowerCase());
+          return (
+            cuisine.includes('arab') ||
+            cuisine.includes('middle') ||
+            cuisine.includes('lebanese') ||
+            cuisine.includes('turkish') ||
+            cuisine.includes('moroccan') ||
+            cuisine.includes('mediterranean') ||
+            tags.some(tag => tag.includes('arab') || tag.includes('middle') || tag.includes('lebanese'))
+          );
+        });
         break;
       case 'favourites':
         base = base.filter(r => favourites.includes(r.id));
@@ -450,77 +498,83 @@ export default function HomeScreen({ navigation }) {
                 <Text style={[styles.fullSearchText, { color: themeColors.accentContrast }]}>Open full search</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.quickRow}>
-              {[
-                { label: 'Burgers', emoji: '🍔', mode: 'burgers' },
-                { label: 'Chicken', emoji: '🍗', mode: 'chicken' },
-                { label: 'Indian', emoji: '🍛', mode: 'indian' },
-                { label: 'Pizza', emoji: '🍕', mode: 'pizza' },
-                { label: 'Healthy', emoji: '🥗', mode: 'healthy' },
-                { label: 'No alcohol', emoji: '🕌', mode: 'no-alcohol' },
-              ].map(option => (
-                <TouchableOpacity
-                  key={option.mode}
-                  style={[
-                    styles.quickButton,
-                    {
-                      borderColor: themeColors.border,
-                      backgroundColor: filterMode === option.mode ? themeColors.accent : themeColors.card,
-                    },
-                  ]}
-                  onPress={() => applyQuickFilter(option.mode)}
-                >
-                  <Text
-                    style={[
-                      styles.quickEmoji,
-                      filterMode === option.mode && { color: themeColors.accentContrast },
-                    ]}
-                  >
-                    {option.emoji}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.quickLabel,
-                      { color: filterMode === option.mode ? themeColors.accentContrast : themeColors.textPrimary },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View
-              style={styles.filterBar}
+            <TouchableOpacity
+              style={[
+                styles.filterToggle,
+                { borderColor: themeColors.border, backgroundColor: themeColors.card },
+              ]}
+              activeOpacity={0.85}
+              onPress={() => setFiltersOpen(true)}
             >
-              <FilterChip
-                label="All"
-                active={filterMode === 'all'}
-                onPress={() => setFilterMode('all')}
-                themeColors={themeColors}
-              />
-              <FilterChip
-                label="All-halal"
-                active={filterMode === 'all-halal'}
-                onPress={() => setFilterMode('all-halal')}
-                themeColors={themeColors}
-              />
-              <FilterChip
-                label="No alcohol"
-                active={filterMode === 'no-alcohol'}
-                onPress={() => setFilterMode('no-alcohol')}
-                themeColors={themeColors}
-              />
-              <FilterChip
-                label="Favourites"
-                active={filterMode === 'favourites'}
-                onPress={() => setFilterMode('favourites')}
-                themeColors={themeColors}
-              />
-            </View>
+              <Text style={[styles.filterToggleLabel, { color: themeColors.textPrimary }]}>Filters</Text>
+              <Text style={[styles.filterToggleValue, { color: themeColors.textSecondary }]}>
+                {currentFilterLabel}
+              </Text>
+            </TouchableOpacity>
             <Text style={[styles.listHeading, { color: themeColors.textSecondary }]}>{listHeading}</Text>
           </View>
         }
       />
+      <Modal
+        visible={filtersOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setFiltersOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <View
+            style={[
+              styles.filterSheet,
+              { backgroundColor: themeColors.card, borderColor: themeColors.border },
+            ]}
+          >
+            <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>Choose a filter</Text>
+            <Text style={[styles.sheetSubtitle, { color: themeColors.textSecondary }]}>
+              Tap to apply. Quick buttons above still work too.
+            </Text>
+            <View style={styles.filterOptionList}>
+              <ScrollView contentContainerStyle={{ gap: 8 }} showsVerticalScrollIndicator={false}>
+                {filterOptions.map(option => {
+                  const active = option.value === filterMode;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.filterOption,
+                        {
+                          borderColor: active ? themeColors.accent : themeColors.border,
+                          backgroundColor: active ? themeColors.tagBackground : themeColors.background,
+                        },
+                      ]}
+                      onPress={() => applyFilter(option.value)}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionLabel,
+                          { color: active ? themeColors.accent : themeColors.textPrimary },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                      <Text style={[styles.filterOptionDescription, { color: themeColors.textSecondary }]}>
+                        {option.description}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+            <TouchableOpacity
+              style={[styles.closeSheetButton, { backgroundColor: themeColors.accent }]}
+              onPress={() => setFiltersOpen(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.closeSheetText, { color: themeColors.accentContrast }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -542,26 +596,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 12,
-  },
-  quickRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  quickButton: {
-    flexBasis: '30%',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  quickEmoji: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  quickLabel: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   searchWrapper: {
     flexDirection: 'row',
@@ -688,19 +722,45 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  filterBar: {
+  filterToggle: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+  filterToggleLabel: { fontSize: 14, fontWeight: '700' },
+  filterToggleValue: { fontSize: 13 },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  filterSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
     borderWidth: 1,
   },
-  chipText: {
-    fontSize: 13,
+  sheetTitle: { fontSize: 18, fontWeight: '700' },
+  sheetSubtitle: { fontSize: 13, marginTop: 4, marginBottom: 12 },
+  filterOptionList: { maxHeight: 380 },
+  filterOption: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
   },
+  filterOptionLabel: { fontSize: 14, fontWeight: '700' },
+  filterOptionDescription: { fontSize: 12, marginTop: 2 },
+  closeSheetButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  closeSheetText: { fontWeight: '700', fontSize: 14 },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
