@@ -53,13 +53,18 @@ const FriendsScreen = ({ navigation }) => {
     return visits.map(visit => {
       const restaurant = restaurants.find(r => r.id === visit.restaurantId);
       return (
-        <View key={`${person.id}-${visit.restaurantId}`} style={[styles.visitCard, { backgroundColor: cardBackground, borderColor }]}>
+        <TouchableOpacity
+          key={`${person.id}-${visit.restaurantId}`}
+          style={[styles.visitCard, { backgroundColor: cardBackground, borderColor }]}
+          onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: restaurant?.id || visit.restaurantId })}
+          activeOpacity={0.85}
+        >
           <Text style={[styles.visitTitle, { color: primaryText }]}>{restaurant?.name ?? 'Restaurant'}</Text>
           <Text style={[styles.visitMeta, { color: secondaryText }]}>
             {restaurant?.city ?? ''} · Rating {visit.rating.toFixed(1)}/5
           </Text>
           {visit.note ? <Text style={[styles.visitNote, { color: secondaryText }]} numberOfLines={1}>{visit.note}</Text> : null}
-        </View>
+        </TouchableOpacity>
       );
     });
   };

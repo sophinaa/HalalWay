@@ -5,8 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMessages } from '../contexts/MessagesContext';
 import { useSocial } from '../contexts/SocialContext';
 import { useThemePreference } from '../contexts/ThemeContext';
+import restaurants from '../data/dundeeStAndrewsRestaurants';
 
-const MessageThreadScreen = ({ route }) => {
+const MessageThreadScreen = ({ route, navigation }) => {
   const { personId } = route.params ?? {};
   const { threads, sendMessage } = useMessages();
   const { followers, following } = useSocial();
@@ -25,6 +26,24 @@ const MessageThreadScreen = ({ route }) => {
   }, [followers, following, personId]);
 
   const messages = threads[personId] || [];
+
+  const renderRestaurantPreview = meta => {
+    if (!meta?.restaurantId) return null;
+    const restaurant = restaurants.find(r => r.id === meta.restaurantId);
+    const title = meta.restaurantName || restaurant?.name || 'Restaurant';
+    const city = meta.restaurantCity || restaurant?.city;
+    return (
+      <TouchableOpacity
+        style={[styles.restaurantCard, { borderColor, backgroundColor: cardBackground }]}
+        onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: meta.restaurantId })}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.restaurantTitle, { color: primaryText }]}>{title}</Text>
+        {city ? <Text style={[styles.restaurantMeta, { color: secondaryText }]}>{city}</Text> : null}
+        <Text style={[styles.restaurantLink, { color: themeColors.accent }]}>Open restaurant</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const handleSend = () => {
     if (!draft.trim()) return;
@@ -76,6 +95,7 @@ const MessageThreadScreen = ({ route }) => {
                 >
                   {msg.text}
                 </Text>
+                {renderRestaurantPreview(msg.meta)}
               </View>
             );
           })}
@@ -120,6 +140,16 @@ const styles = StyleSheet.create({
     maxWidth: '78%',
   },
   bubbleText: { fontSize: 14 },
+  restaurantCard: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 4,
+  },
+  restaurantTitle: { fontWeight: '700', fontSize: 14 },
+  restaurantMeta: { fontSize: 12 },
+  restaurantLink: { fontSize: 12, fontWeight: '700' },
   empty: { textAlign: 'center', marginTop: 20, fontSize: 13 },
   inputRow: {
     flexDirection: 'row',

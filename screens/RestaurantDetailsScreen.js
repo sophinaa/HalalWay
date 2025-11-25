@@ -12,6 +12,13 @@ import { useSocial } from '../contexts/SocialContext';
 import { useMessages } from '../contexts/MessagesContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
+const initialsForName = name => {
+  if (!name) return '?';
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
 const RestaurantDetailsScreen = ({ route }) => {
   const { restaurantId } = route.params;
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
@@ -92,7 +99,12 @@ const RestaurantDetailsScreen = ({ route }) => {
   const sendToFriend = friend => {
     if (!friend) return;
     const message = `Check out ${restaurant?.name ?? 'this restaurant'} in ${restaurant?.city ?? ''}!`;
-    sendMessage(friend.id, message);
+    sendMessage(friend.id, message, {
+      restaurantId: restaurantId,
+      restaurantName: restaurant?.name,
+      restaurantCity: restaurant?.city,
+      restaurantCuisine: restaurant?.cuisine,
+    });
     Alert.alert('Sent', `Shared with ${friend.name}.`);
     setShareModalVisible(false);
   };
@@ -106,7 +118,7 @@ const RestaurantDetailsScreen = ({ route }) => {
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: [ImagePicker.MediaType.Images],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -134,7 +146,7 @@ const RestaurantDetailsScreen = ({ route }) => {
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
+        mediaTypes: [ImagePicker.MediaType.Images],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -326,7 +338,7 @@ const RestaurantDetailsScreen = ({ route }) => {
           ]}
         >
           <Text style={[styles.favButtonText, { color: themeColors.accentContrast }]}>
-            {favourite ? 'Remove favourite' : 'Save ⭐'}
+            {favourite ? '⭐ Remove from favourites' : '⭐ Add to favourites'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

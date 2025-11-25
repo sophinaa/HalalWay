@@ -54,14 +54,14 @@ export const MessagesProvider = ({ children }) => {
     }
   };
 
-  const sendMessage = (personId, text) => {
+  const sendMessage = (personId, text, meta) => {
     if (!text?.trim()) return;
     setThreads(prev => {
       const next = {
         ...prev,
         [personId]: [
           ...(prev[personId] || []),
-          { id: `${Date.now()}`, from: 'me', text: text.trim(), ts: Date.now() },
+          { id: `${Date.now()}`, from: 'me', text: text.trim(), ts: Date.now(), meta },
         ],
       };
       persist(next);
