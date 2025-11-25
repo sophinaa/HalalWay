@@ -529,9 +529,7 @@ export default function HomeScreen({ navigation }) {
             ]}
           >
             <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>Choose a filter</Text>
-            <Text style={[styles.sheetSubtitle, { color: themeColors.textSecondary }]}>
-              Tap to apply. Quick buttons above still work too.
-            </Text>
+            <Text style={[styles.sheetSubtitle, { color: themeColors.textSecondary }]}>Tap to apply.</Text>
             <View style={styles.filterOptionList}>
               <ScrollView contentContainerStyle={{ gap: 8 }} showsVerticalScrollIndicator={false}>
                 {filterOptions.map(option => {
