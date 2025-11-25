@@ -94,6 +94,9 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
       <Text style={[styles.metaNote, { color: colors.textSecondary ?? '#475569' }]}>
         Halal: {halalText} · Alcohol: {alcoholText}
       </Text>
+      <Text style={[styles.metaNote, { color: colors.muted ?? '#9ca3af' }]}>
+        {item.distanceMiles != null ? `${item.distanceMiles.toFixed(1)} miles away` : 'Distance unavailable'}
+      </Text>
 
       <View style={styles.tagRow}>
         {tags.slice(0, 3).map(tag => (
@@ -119,6 +122,7 @@ export default function HomeScreen({ navigation }) {
   const [locationError, setLocationError] = useState(null);
   const [locationCoords, setLocationCoords] = useState(null);
   const searchInputRef = useRef(null);
+  const lastGeocodedCoords = useRef(null);
   const { user } = useAuth();
   const { favourites } = useFavourites();
   const { theme, themeColors } = useThemePreference();
@@ -129,6 +133,59 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     let isMounted = true;
+    let locationWatcher;
+
+    const toRad = deg => (deg * Math.PI) / 180;
+    const distanceBetweenMiles = (a, b) => {
+      const R = 6371; // km
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const h =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      const distanceKm = R * c;
+      return distanceKm * 0.621371;
+    };
+
+    const updateLabel = async coords => {
+      let readable = `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`;
+      try {
+        const [place] = await Location.reverseGeocodeAsync(coords);
+        if (place) {
+          const parts = [place.city || place.subregion || place.region, place.country || place.isoCountryCode];
+          const formatted = parts.filter(Boolean).join(', ');
+          if (formatted) {
+            readable = formatted;
+          }
+        }
+      } catch {
+        // keep coordinates as fallback
+      }
+
+      if (!isMounted) return;
+      lastGeocodedCoords.current = { lat: coords.latitude, lng: coords.longitude };
+      setLocationLabel(readable);
+      setLocationError(null);
+    };
+
+    const handlePosition = coords => {
+      if (!isMounted) return;
+      const current = { lat: coords.latitude, lng: coords.longitude };
+      setLocationCoords(current);
+      const last = lastGeocodedCoords.current;
+      if (!last) {
+        updateLabel(coords);
+        return;
+      }
+      const moved = distanceBetweenMiles(current, last);
+      if (moved >= 0.25) {
+        updateLabel(coords);
+      }
+    };
+
     const fetchLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -143,31 +200,16 @@ export default function HomeScreen({ navigation }) {
         const position = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        if (isMounted) {
-          setLocationCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        }
+        handlePosition(position.coords);
 
-        let readable = `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
-        try {
-          const [place] = await Location.reverseGeocodeAsync(position.coords);
-          if (place) {
-            const parts = [place.city || place.subregion || place.region, place.country || place.isoCountryCode];
-            const formatted = parts.filter(Boolean).join(', ');
-            if (formatted) {
-              readable = formatted;
-            }
-          }
-        } catch {
-          // best effort, keep coordinates
-        }
-
-        if (isMounted) {
-          setLocationLabel(readable);
-          setLocationError(null);
-        }
+        locationWatcher = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 100,
+            timeInterval: 10000,
+          },
+          pos => handlePosition(pos.coords),
+        );
       } catch {
         if (isMounted) {
           setLocationError('Unable to fetch location');
@@ -180,6 +222,7 @@ export default function HomeScreen({ navigation }) {
     fetchLocation();
     return () => {
       isMounted = false;
+      locationWatcher?.remove?.();
     };
   }, []);
 
@@ -281,20 +324,34 @@ export default function HomeScreen({ navigation }) {
     }
 
     if (!query) {
-      return base;
+      return base.map(r => ({
+        ...r,
+        distanceMiles:
+          locationCoords && r.location?.lat && r.location?.lng
+            ? distanceMiles(locationCoords, { lat: r.location.lat, lng: r.location.lng })
+            : null,
+      }));
     }
-    return base.filter(r => {
-      const haystack = [
-        r.name || '',
-        r.cuisine || '',
-        r.city || '',
-        r.area || '',
+    return base
+      .filter(r => {
+        const haystack = [
+          r.name || '',
+          r.cuisine || '',
+          r.city || '',
+          r.area || '',
         ...(r.tags || []),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(query);
-    });
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      })
+      .map(r => ({
+        ...r,
+        distanceMiles:
+          locationCoords && r.location?.lat && r.location?.lng
+            ? distanceMiles(locationCoords, { lat: r.location.lat, lng: r.location.lng })
+            : null,
+      }));
   }, [filterMode, favourites, searchQuery, locationCoords]);
 
   const renderItem = ({ item }) => (
@@ -307,6 +364,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   const isSearching = searchQuery.trim().length > 0;
+  const listHeading = isSearching ? 'Search results' : 'Nearby halal places (within 10 miles)';
   const emptyMessage = isSearching
     ? 'No matching restaurants found.'
     : locationCoords
@@ -440,6 +498,7 @@ export default function HomeScreen({ navigation }) {
                 themeColors={themeColors}
               />
             </View>
+            <Text style={[styles.listHeading, { color: themeColors.textSecondary }]}>{listHeading}</Text>
           </View>
         }
       />
@@ -630,5 +689,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  listHeading: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

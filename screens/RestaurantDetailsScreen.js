@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
@@ -13,8 +14,74 @@ const RestaurantDetailsScreen = ({ route }) => {
   const backgroundColor = themeColors.background;
   const primaryText = themeColors.textPrimary;
   const secondaryText = themeColors.textSecondary;
+  const [distanceMiles, setDistanceMiles] = useState(null);
+  const [distanceError, setDistanceError] = useState(null);
 
   const restaurant = useMemo(() => restaurants.find(r => r.id === restaurantId), [restaurantId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let locationWatcher;
+    const toRad = deg => (deg * Math.PI) / 180;
+    const calculateDistance = (a, b) => {
+      const R = 6371;
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const h =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      return (R * c) * 0.621371;
+    };
+
+    const fetchDistance = async () => {
+      if (!restaurant?.location?.lat || !restaurant?.location?.lng) {
+        return;
+      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (isMounted) setDistanceError('Location permission denied');
+          return;
+        }
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const updateFromCoords = coords => {
+          if (!isMounted) return;
+          const miles = calculateDistance(
+            { lat: coords.latitude, lng: coords.longitude },
+            { lat: restaurant.location.lat, lng: restaurant.location.lng },
+          );
+          setDistanceMiles(miles);
+          setDistanceError(null);
+        };
+
+        updateFromCoords(position.coords);
+
+        locationWatcher = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 100,
+            timeInterval: 10000,
+          },
+          pos => updateFromCoords(pos.coords),
+        );
+      } catch (err) {
+        if (isMounted) {
+          setDistanceError('Unable to determine distance');
+        }
+      }
+    };
+
+    fetchDistance();
+    return () => {
+      isMounted = false;
+      locationWatcher?.remove?.();
+    };
+  }, [restaurant]);
 
   if (!restaurant) {
     return (
@@ -63,6 +130,10 @@ const RestaurantDetailsScreen = ({ route }) => {
         {address?.line1}
         {'\n'}
         {address?.postcode}
+        {'\n'}
+        {distanceMiles != null
+          ? `${distanceMiles.toFixed(1)} miles away`
+          : distanceError || 'Distance unavailable'}
       </Text>
 
       <TouchableOpacity
