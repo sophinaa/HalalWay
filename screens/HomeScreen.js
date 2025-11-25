@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ImageBackground,
@@ -9,8 +9,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 
@@ -114,28 +116,116 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
 export default function HomeScreen({ navigation }) {
   const [filterMode, setFilterMode] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationLabel, setLocationLabel] = useState('Detecting location...');
+  const [locationError, setLocationError] = useState(null);
+  const [locationCoords, setLocationCoords] = useState(null);
+  const { user } = useAuth();
   const { favourites } = useFavourites();
   const { theme, themeColors } = useThemePreference();
   const isDark = theme === 'dark';
+  const preferredName =
+    (user?.displayName && user.displayName.trim()) ||
+    user?.email?.split('@')[0] ||
+    'HalalWay user';
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (isMounted) {
+            setLocationError('Location permission denied');
+            setLocationLabel('Location permission denied');
+          }
+          return;
+        }
+
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (isMounted) {
+          setLocationCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        }
+
+        let readable = `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
+        try {
+          const [place] = await Location.reverseGeocodeAsync(position.coords);
+          if (place) {
+            const parts = [place.city || place.subregion || place.region, place.country || place.isoCountryCode];
+            const formatted = parts.filter(Boolean).join(', ');
+            if (formatted) {
+              readable = formatted;
+            }
+          }
+        } catch {
+          // best effort, keep coordinates
+        }
+
+        if (isMounted) {
+          setLocationLabel(readable);
+          setLocationError(null);
+        }
+      } catch {
+        if (isMounted) {
+          setLocationError('Unable to fetch location');
+          setLocationLabel('Location unavailable');
+          setLocationCoords(null);
+        }
+      }
+    };
+
+    fetchLocation();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const applyQuickFilter = mode => {
     setFilterMode(mode);
   };
 
+  const distanceMiles = (a, b) => {
+    const toRad = deg => (deg * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    const distanceKm = R * c;
+    return distanceKm * 0.621371;
+  };
+
   const filteredRestaurants = useMemo(() => {
-    let base = restaurants;
+    if (!locationCoords) {
+      return [];
+    }
+
+    let base = restaurants.filter(r => {
+      if (!r.location?.lat || !r.location?.lng) return false;
+      const miles = distanceMiles(locationCoords, { lat: r.location.lat, lng: r.location.lng });
+      return miles <= 10;
+    });
+
     switch (filterMode) {
       case 'all-halal':
-        base = restaurants.filter(r => r.halalInfo?.overallStatus === 'all-halal');
+        base = base.filter(r => r.halalInfo?.overallStatus === 'all-halal');
         break;
       case 'no-alcohol':
-        base = restaurants.filter(r => r.alcoholInfo?.servesAlcohol === false);
+        base = base.filter(r => r.alcoholInfo?.servesAlcohol === false);
         break;
       case 'favourites':
-        base = restaurants.filter(r => favourites.includes(r.id));
+        base = base.filter(r => favourites.includes(r.id));
         break;
       case 'burgers':
-        base = restaurants.filter(r => {
+        base = base.filter(r => {
           const cuisine = (r.cuisine || '').toLowerCase();
           const tags = (r.tags || []).map(tag => tag.toLowerCase());
           return (
@@ -146,13 +236,13 @@ export default function HomeScreen({ navigation }) {
         });
         break;
       case 'chicken':
-        base = restaurants.filter(r => {
+        base = base.filter(r => {
           const cuisine = (r.cuisine || '').toLowerCase();
           return cuisine.includes('chicken') || cuisine.includes('peri');
         });
         break;
       case 'indian':
-        base = restaurants.filter(r => {
+        base = base.filter(r => {
           const cuisine = (r.cuisine || '').toLowerCase();
           const name = (r.name || '').toLowerCase();
           return (
@@ -164,13 +254,13 @@ export default function HomeScreen({ navigation }) {
         });
         break;
       case 'pizza':
-        base = restaurants.filter(r => {
+        base = base.filter(r => {
           const cuisine = (r.cuisine || '').toLowerCase();
           return cuisine.includes('pizza') || cuisine.includes('doner');
         });
         break;
       case 'healthy':
-        base = restaurants.filter(r => {
+        base = base.filter(r => {
           const cuisine = (r.cuisine || '').toLowerCase();
           const tags = (r.tags || []).map(tag => tag.toLowerCase());
           return (
@@ -181,7 +271,7 @@ export default function HomeScreen({ navigation }) {
         });
         break;
       default:
-        base = restaurants;
+        break;
     }
 
     const query = searchQuery.trim().toLowerCase();
@@ -200,7 +290,7 @@ export default function HomeScreen({ navigation }) {
         .toLowerCase();
       return haystack.includes(query);
     });
-  }, [filterMode, favourites, searchQuery]);
+  }, [filterMode, favourites, searchQuery, locationCoords]);
 
   const renderItem = ({ item }) => (
     <RestaurantCard
@@ -211,6 +301,12 @@ export default function HomeScreen({ navigation }) {
     />
   );
 
+  const emptyMessage = locationCoords
+    ? 'No restaurants within 10 miles.'
+    : locationError
+    ? 'Enable location to see nearby restaurants.'
+    : 'Detecting your location...';
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top']}>
       <FlatList
@@ -218,8 +314,24 @@ export default function HomeScreen({ navigation }) {
         keyExtractor={item => item.id}
         contentContainerStyle={[styles.listContent, { backgroundColor: themeColors.background }]}
         renderItem={renderItem}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>{emptyMessage}</Text>
+          </View>
+        }
         ListHeaderComponent={
           <View style={styles.headerBlock}>
+            <View style={styles.greetingBlock}>
+              <Text style={[styles.greeting, { color: themeColors.textPrimary }]}>
+                Salaam, {preferredName} 👋
+              </Text>
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                Find halal food near you
+              </Text>
+              <Text style={[styles.locationLine, { color: themeColors.muted }]}>
+                {locationError ? 'Location unavailable' : `${locationLabel} • Using your location`}
+              </Text>
+            </View>
             <ImageBackground
               source={{
                 uri: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=60',
@@ -456,6 +568,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'left',
   },
+  greetingBlock: {
+    gap: 4,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  locationLine: {
+    fontSize: 13,
+  },
   body: {
     fontSize: 14,
     lineHeight: 20,
@@ -527,5 +649,13 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
