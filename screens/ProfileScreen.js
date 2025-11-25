@@ -80,13 +80,14 @@ const ProfileScreen = ({ navigation }) => {
   const pickProfilePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const granted = status === 'granted' || status === 'limited';
+      if (!granted) {
         Alert.alert('Permission required', 'Please grant photo library permissions to update your profile picture.');
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.IMAGE],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -94,6 +95,8 @@ const ProfileScreen = ({ navigation }) => {
 
       handlePhotoResult(result);
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to pick profile photo', error);
       Alert.alert('Error', 'Unable to pick an image right now. Please try again later.');
     }
   };
@@ -105,9 +108,14 @@ const ProfileScreen = ({ navigation }) => {
         Alert.alert('Permission required', 'Please grant camera permissions to take a profile picture.');
         return;
       }
+      const cameraAvailable = await ImagePicker.isCameraAvailableAsync?.();
+      if (cameraAvailable === false) {
+        Alert.alert('Camera unavailable', 'No camera available on this device.');
+        return;
+      }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.IMAGE],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -115,6 +123,8 @@ const ProfileScreen = ({ navigation }) => {
 
       handlePhotoResult(result);
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to take profile photo', error);
       Alert.alert('Error', 'Unable to take a photo right now. Please try again later.');
     }
   };

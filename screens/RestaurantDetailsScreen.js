@@ -73,11 +73,13 @@ const RestaurantDetailsScreen = ({ route }) => {
   const handlePickPhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const granted = status === 'granted' || status === 'limited';
+      if (!granted) {
+        Alert.alert('Permission required', 'Please grant photo library permissions to add a review photo.');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.IMAGE],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -85,8 +87,10 @@ const RestaurantDetailsScreen = ({ route }) => {
       if (!result.canceled && result.assets?.length) {
         setReviewPhoto(result.assets[0].uri);
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Pick review photo failed', error);
+      Alert.alert('Error', 'Unable to pick a photo right now. Please try again.');
     }
   };
 
@@ -94,10 +98,16 @@ const RestaurantDetailsScreen = ({ route }) => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant camera permissions to take a review photo.');
+        return;
+      }
+      const cameraAvailable = await ImagePicker.isCameraAvailableAsync?.();
+      if (cameraAvailable === false) {
+        Alert.alert('Camera unavailable', 'No camera available on this device.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.IMAGE],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -105,8 +115,10 @@ const RestaurantDetailsScreen = ({ route }) => {
       if (!result.canceled && result.assets?.length) {
         setReviewPhoto(result.assets[0].uri);
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Take review photo failed', error);
+      Alert.alert('Error', 'Unable to take a photo right now. Please try again.');
     }
   };
 
