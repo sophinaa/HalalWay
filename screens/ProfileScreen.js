@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -7,12 +7,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
+import { useSocial } from '../contexts/SocialContext';
 import { useThemePreference } from '../contexts/ThemeContext';
 import restaurants from '../data/dundeeStAndrewsRestaurants';
+
+const initialsForName = name => {
+  if (!name) return '?';
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout, username } = useAuth();
   const { favourites } = useFavourites();
+  const { followers, following, suggested, followBack, followUser, isFollowing, mutualCount } = useSocial();
   const { theme, themeMode, setThemeMode, themeColors } = useThemePreference();
   const useSystemTheme = themeMode === 'system';
   const backgroundColor = themeColors.background;
@@ -142,6 +151,22 @@ const ProfileScreen = ({ navigation }) => {
     setThemeMode(nextMode);
   };
 
+  const socialPreview = useMemo(() => {
+    const combined = [...followers, ...following];
+    const seen = new Set();
+    const unique = [];
+    combined.forEach(person => {
+      if (!seen.has(person.id)) {
+        unique.push(person);
+        seen.add(person.id);
+      }
+    });
+    return unique.slice(0, 6);
+  }, [followers, following]);
+
+  const nextFollowerToAddBack = followers.find(person => !isFollowing(person.id));
+  const nextSuggestion = suggested.find(person => !isFollowing(person.id));
+
   if (!user) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
@@ -184,6 +209,79 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={[styles.avatarButtonText, { color: themeColors.accent }]}>Edit profile photo</Text>
         </TouchableOpacity>
       </View>
+      </View>
+      <View style={[styles.section, styles.socialSection, { backgroundColor: cardBackground, borderColor }]}>
+        <View style={styles.socialHeader}>
+          <Text style={[styles.sectionTitle, { color: primaryText, textAlign: 'left', marginBottom: 0 }]}>
+            Friends
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Social')}>
+            <Text style={[styles.socialLink, { color: themeColors.accent }]}>Open social</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.socialStatsRow}>
+          <View style={[styles.socialStat, { borderColor }]}>
+            <Text style={[styles.socialStatLabel, { color: secondaryText }]}>Followers</Text>
+            <Text style={[styles.socialStatValue, { color: primaryText }]}>{followers.length}</Text>
+          </View>
+          <View style={[styles.socialStat, { borderColor }]}>
+            <Text style={[styles.socialStatLabel, { color: secondaryText }]}>Following</Text>
+            <Text style={[styles.socialStatValue, { color: primaryText }]}>{following.length}</Text>
+          </View>
+          <View style={[styles.socialStat, { borderColor }]}>
+            <Text style={[styles.socialStatLabel, { color: secondaryText }]}>Mutual</Text>
+            <Text style={[styles.socialStatValue, { color: primaryText }]}>{mutualCount}</Text>
+          </View>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.socialPreviewRow}
+        >
+          {socialPreview.map(person => {
+            const mutual = isFollowing(person.id) && followers.some(f => f.id === person.id);
+            const followsYou = followers.some(f => f.id === person.id);
+            return (
+              <View
+                key={person.id}
+                style={[styles.socialPill, { borderColor, backgroundColor: themeColors.tagBackground }]}
+              >
+                <View style={[styles.socialAvatar, { backgroundColor: cardBackground }]}>
+                  <Text style={[styles.socialAvatarText, { color: primaryText }]}>
+                    {initialsForName(person.name)}
+                  </Text>
+                </View>
+                <Text style={[styles.socialName, { color: primaryText }]} numberOfLines={1}>
+                  {person.name.split(' ')[0]}
+                </Text>
+                <Text style={[styles.socialHandle, { color: secondaryText }]} numberOfLines={1}>
+                  @{person.handle}
+                </Text>
+                <Text style={[styles.socialStatus, { color: mutual ? themeColors.accent : secondaryText }]}>
+                  {mutual ? 'Mutual' : followsYou ? 'Follows you' : 'You follow'}
+                </Text>
+              </View>
+            );
+          })}
+          {nextFollowerToAddBack ? (
+            <TouchableOpacity
+              style={[styles.socialActionPill, { borderColor }]}
+              onPress={() => followBack(nextFollowerToAddBack.id)}
+            >
+              <Text style={[styles.socialActionText, { color: themeColors.accent }]}>Add back</Text>
+              <Text style={[styles.socialHandle, { color: secondaryText }]}>@{nextFollowerToAddBack.handle}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {nextSuggestion ? (
+            <TouchableOpacity
+              style={[styles.socialActionPill, { borderColor }]}
+              onPress={() => followUser(nextSuggestion)}
+            >
+              <Text style={[styles.socialActionText, { color: themeColors.accent }]}>Add friend</Text>
+              <Text style={[styles.socialHandle, { color: secondaryText }]}>@{nextSuggestion.handle}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
       </View>
       <View
         style={[
@@ -281,6 +379,7 @@ const ProfileScreen = ({ navigation }) => {
           { title: 'Contact us', description: 'Partnerships, help, and audits', target: 'Contact' },
           { title: 'Notifications', description: 'Pick which updates to receive', target: 'NotificationSettings' },
           { title: 'About & terms', description: 'Learn how HalalWay works', target: 'Legal' },
+          { title: 'Friends & social', description: 'Followers, following, and suggestions', target: 'Social' },
         ].map(link => (
           <TouchableOpacity
             key={link.title}
@@ -312,6 +411,13 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     alignItems: 'center',
+  },
+  section: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 12,
   },
   label: { fontSize: 13, marginTop: 8, textAlign: 'center' },
   value: { fontSize: 15, textAlign: 'center' },
@@ -441,6 +547,77 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
+  socialSection: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    gap: 12,
+  },
+  socialHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  socialLink: {
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  socialStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  socialStat: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  socialStatLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  socialStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  socialPreviewRow: {
+    gap: 10,
+    paddingTop: 4,
+  },
+  socialPill: {
+    width: 120,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    gap: 4,
+  },
+  socialAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  socialAvatarText: { fontWeight: '700' },
+  socialName: { fontSize: 14, fontWeight: '700' },
+  socialHandle: { fontSize: 12 },
+  socialStatus: { fontSize: 11, fontWeight: '600' },
+  socialActionPill: {
+    width: 140,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  socialActionText: { fontSize: 14, fontWeight: '700' },
   favouritePill: {
     width: 220,
     borderRadius: 16,
