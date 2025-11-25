@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -77,7 +77,7 @@ const RestaurantDetailsScreen = ({ route }) => {
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: [ImagePicker.MediaType.IMAGE],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -88,6 +88,34 @@ const RestaurantDetailsScreen = ({ route }) => {
     } catch {
       // ignore
     }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: [ImagePicker.MediaType.IMAGE],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) {
+        setReviewPhoto(result.assets[0].uri);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const choosePhotoSource = () => {
+    Alert.alert('Add photo', 'Choose how to add a photo to your review.', [
+      { text: 'Take photo', onPress: handleTakePhoto },
+      { text: 'Choose from library', onPress: handlePickPhoto },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleSubmitReview = async () => {
@@ -364,7 +392,7 @@ const RestaurantDetailsScreen = ({ route }) => {
           <View style={styles.reviewActions}>
             <TouchableOpacity
               style={[styles.photoButton, { borderColor: themeColors.border }]}
-              onPress={handlePickPhoto}
+              onPress={choosePhotoSource}
             >
               <Text style={[styles.photoButtonText, { color: themeColors.textPrimary }]}>Add photo</Text>
             </TouchableOpacity>
