@@ -68,6 +68,14 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handlePhotoResult = result => {
+    if (!result?.canceled && result.assets?.length) {
+      const uri = result.assets[0].uri;
+      setProfilePhoto(uri);
+      persistProfilePhoto(uri);
+    }
+  };
+
   const pickProfilePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -77,20 +85,45 @@ const ProfileScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets?.length) {
-        const uri = result.assets[0].uri;
-        setProfilePhoto(uri);
-        persistProfilePhoto(uri);
-      }
+      handlePhotoResult(result);
     } catch (error) {
       Alert.alert('Error', 'Unable to pick an image right now. Please try again later.');
     }
+  };
+
+  const takeProfilePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant camera permissions to take a profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      handlePhotoResult(result);
+    } catch (error) {
+      Alert.alert('Error', 'Unable to take a photo right now. Please try again later.');
+    }
+  };
+
+  const promptForPhotoSource = () => {
+    Alert.alert('Update profile photo', 'Choose how you want to add a photo.', [
+      { text: 'Take a photo', onPress: takeProfilePhoto },
+      { text: 'Choose from library', onPress: pickProfilePhoto },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   if (!user) {
@@ -127,7 +160,7 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={[styles.profileName, { color: primaryText }]}>{preferredName}</Text>
         <TouchableOpacity
           style={[styles.avatarButton, { backgroundColor: 'transparent' }]}
-          onPress={pickProfilePhoto}
+          onPress={promptForPhotoSource}
         >
           <Text style={[styles.avatarButtonText, { color: themeColors.accent }]}>Edit profile photo</Text>
         </TouchableOpacity>
