@@ -12,12 +12,21 @@ const initialsForName = name => {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
-const validTabs = ['followers', 'following', 'suggested'];
+const validTabs = ['followers', 'following', 'mutual', 'suggested'];
 
 const SocialScreen = ({ navigation, route }) => {
   const { themeColors } = useThemePreference();
-  const { followers, following, suggested, followBack, followUser, unfollowUser, isFollowing, mutualCount } =
-    useSocial();
+  const {
+    followers,
+    following,
+    suggested,
+    followBack,
+    followUser,
+    unfollowUser,
+    isFollowing,
+    mutualCount,
+    mutualIds,
+  } = useSocial();
   const [activeTab, setActiveTab] = useState(
     () => (route?.params?.tab && validTabs.includes(route.params.tab) ? route.params.tab : 'followers'),
   );
@@ -42,6 +51,12 @@ const SocialScreen = ({ navigation, route }) => {
     ],
     [followers.length, following.length, mutualCount],
   );
+
+  const mutuals = useMemo(() => {
+    if (!mutualIds?.length) return [];
+    const ids = new Set(mutualIds);
+    return following.filter(p => ids.has(p.id));
+  }, [following, mutualIds]);
 
   const renderPerson = (person, { actionLabel, action, status }) => {
     const meta = [person.handle ? `@${person.handle}` : null, person.city].filter(Boolean).join(' · ');
@@ -95,8 +110,8 @@ const SocialScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['bottom']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: primaryText }]}>Social</Text>
           <TouchableOpacity
@@ -110,16 +125,17 @@ const SocialScreen = ({ navigation, route }) => {
         <View style={[styles.statsCard, { backgroundColor: cardBackground, borderColor }]}>
           {stats.map(stat => (
             <View key={stat.label} style={styles.statItem}>
-            <Text style={[styles.statLabel, { color: secondaryText }]}>{stat.label}</Text>
-            <Text style={[styles.statValue, { color: primaryText }]}>{stat.value}</Text>
-          </View>
-        ))}
+              <Text style={[styles.statLabel, { color: secondaryText }]}>{stat.label}</Text>
+              <Text style={[styles.statValue, { color: primaryText }]}>{stat.value}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={[styles.tabs, { borderColor }]}>
           {[
             { key: 'followers', label: 'Followers', count: followers.length },
             { key: 'following', label: 'Following', count: following.length },
+            { key: 'mutual', label: 'Mutual', count: mutualCount },
             { key: 'suggested', label: 'Suggested', count: suggested.length },
           ].map(tab => {
             const selected = tab.key === activeTab;
@@ -184,6 +200,24 @@ const SocialScreen = ({ navigation, route }) => {
           </>
         ) : null}
 
+        {activeTab === 'mutual' ? (
+          <>
+            <Text style={[styles.sectionTitle, { color: primaryText }]}>Mutual friends</Text>
+            {mutuals.map(person =>
+              renderPerson(person, {
+                actionLabel: 'Unfollow',
+                action: () => unfollowUser(person.id),
+                status: 'Mutual friends',
+              }),
+            )}
+            {mutuals.length === 0 ? (
+              <View style={[styles.emptyCard, { borderColor, backgroundColor: cardBackground }]}>
+                <Text style={[styles.personHandle, { color: secondaryText }]}>No mutual friends yet.</Text>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
         {activeTab === 'suggested' ? (
           <>
             <Text style={[styles.sectionTitle, { color: primaryText }]}>Suggested friends</Text>
@@ -208,23 +242,24 @@ const SocialScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
+  scroll: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 12, gap: 10 },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   statsCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
+    padding: 12,
+    marginBottom: 12,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
     gap: 4,
   },
-  statLabel: { fontSize: 13, fontWeight: '600' },
-  statValue: { fontSize: 20, fontWeight: '700' },
+  statLabel: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  statValue: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   messagesButton: {
     paddingHorizontal: 12,
@@ -238,7 +273,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   tabButton: {
     flex: 1,
@@ -247,7 +282,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRightWidth: 1,
   },
-  tabText: { fontWeight: '700', fontSize: 14 },
+  tabText: { fontWeight: '700', fontSize: 12, textAlign: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginVertical: 10 },
   personCard: {
     borderWidth: 1,

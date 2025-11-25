@@ -201,7 +201,7 @@ const ProfileScreen = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.socialStat, { borderColor }]}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Social', { tab: 'followers' })}
+            onPress={() => navigation.navigate('Social', { tab: 'mutual' })}
           >
             <Text style={[styles.socialStatLabel, { color: secondaryText }]}>Mutual</Text>
             <Text style={[styles.socialStatValue, { color: primaryText }]}>{mutualCount}</Text>
@@ -519,11 +519,13 @@ const styles = StyleSheet.create({
   socialStatLabel: {
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   socialStatValue: {
     fontSize: 18,
     fontWeight: '700',
     marginTop: 4,
+    textAlign: 'center',
   },
   favouritePill: {
     width: 220,

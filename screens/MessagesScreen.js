@@ -72,7 +72,7 @@ const MessagesScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['bottom']}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: primaryText }]}>Messages</Text>
@@ -137,11 +137,11 @@ const MessagesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 0 },
-  header: { marginBottom: 4, paddingTop: 8 },
+  header: { marginBottom: 4, paddingTop: 4 },
   title: { fontSize: 22, fontWeight: '700' },
   subtitle: { fontSize: 13, marginTop: 4 },
   scroll: { flex: 1 },
-  content: { paddingBottom: 12, gap: 10 },
+  content: { paddingTop: 0, paddingBottom: 12, gap: 10 },
   threadCard: {
     borderWidth: 1,
     borderRadius: 14,
