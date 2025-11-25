@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
-  ImageBackground,
   StyleSheet,
   Text,
   TextInput,
@@ -119,10 +118,10 @@ export default function HomeScreen({ navigation }) {
   const [locationLabel, setLocationLabel] = useState('Detecting location...');
   const [locationError, setLocationError] = useState(null);
   const [locationCoords, setLocationCoords] = useState(null);
+  const searchInputRef = useRef(null);
   const { user } = useAuth();
   const { favourites } = useFavourites();
   const { theme, themeColors } = useThemePreference();
-  const isDark = theme === 'dark';
   const preferredName =
     (user?.displayName && user.displayName.trim()) ||
     user?.email?.split('@')[0] ||
@@ -204,15 +203,22 @@ export default function HomeScreen({ navigation }) {
   };
 
   const filteredRestaurants = useMemo(() => {
-    if (!locationCoords) {
-      return [];
-    }
+    const query = searchQuery.trim().toLowerCase();
+    const isSearching = query.length > 0;
 
-    let base = restaurants.filter(r => {
-      if (!r.location?.lat || !r.location?.lng) return false;
-      const miles = distanceMiles(locationCoords, { lat: r.location.lat, lng: r.location.lng });
-      return miles <= 10;
-    });
+    let base;
+    if (isSearching) {
+      base = restaurants;
+    } else {
+      if (!locationCoords) {
+        return [];
+      }
+      base = restaurants.filter(r => {
+        if (!r.location?.lat || !r.location?.lng) return false;
+        const miles = distanceMiles(locationCoords, { lat: r.location.lat, lng: r.location.lng });
+        return miles <= 10;
+      });
+    }
 
     switch (filterMode) {
       case 'all-halal':
@@ -274,7 +280,6 @@ export default function HomeScreen({ navigation }) {
         break;
     }
 
-    const query = searchQuery.trim().toLowerCase();
     if (!query) {
       return base;
     }
@@ -301,7 +306,10 @@ export default function HomeScreen({ navigation }) {
     />
   );
 
-  const emptyMessage = locationCoords
+  const isSearching = searchQuery.trim().length > 0;
+  const emptyMessage = isSearching
+    ? 'No matching restaurants found.'
+    : locationCoords
     ? 'No restaurants within 10 miles.'
     : locationError
     ? 'Enable location to see nearby restaurants.'
@@ -332,32 +340,39 @@ export default function HomeScreen({ navigation }) {
                 {locationError ? 'Location unavailable' : `${locationLabel} • Using your location`}
               </Text>
             </View>
-            <ImageBackground
-              source={{
-                uri: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=60',
-              }}
-              imageStyle={styles.heroImage}
-              style={[
-                styles.heroBanner,
-                { backgroundColor: isDark ? '#1f2933' : '#e2e8f0', borderColor: themeColors.border },
-              ]}
-            >
-              <View style={styles.heroOverlay} />
-              <View style={styles.heroContent}>
-                <Text style={styles.heroKicker}>Find Halal Food Near You 🍽️</Text>
-                <Text style={styles.heroTitle}>Discover trusted places to eat in Dundee & St Andrews.</Text>
-                <Text style={styles.heroBody}>
-                  Filter by cuisine, halal status, or alcohol policy. Tap a category to jump straight into a curated
-                  list.
-                </Text>
-                <TouchableOpacity
-                  style={styles.heroCTA}
-                  onPress={() => navigation.navigate('MapTab')}
-                >
-                  <Text style={styles.heroCTAText}>Explore Map</Text>
-                </TouchableOpacity>
-              </View>
-            </ImageBackground>
+            <View style={[styles.primarySearchCard, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+              <Text style={[styles.primarySearchTitle, { color: themeColors.textPrimary }]}>
+                Search for a halal restaurant, cuisine, or city
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={[styles.primarySearchInput, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+                onPress={() => searchInputRef.current?.focus()}
+              >
+                <Text style={[styles.searchIcon, { color: themeColors.muted }]}>🔍</Text>
+                <TextInput
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search restaurants, cuisines..."
+                  placeholderTextColor={themeColors.inputPlaceholder}
+                  style={[styles.searchInput, { color: themeColors.textPrimary }]}
+                  autoCorrect={false}
+                  returnKeyType="search"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Text style={[styles.clearText, { color: themeColors.accent }]}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fullSearchButton, { backgroundColor: themeColors.accent }]}
+                onPress={() => searchInputRef.current?.focus()}
+              >
+                <Text style={[styles.fullSearchText, { color: themeColors.accentContrast }]}>Open full search</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.quickRow}>
               {[
                 { label: 'Burgers', emoji: '🍔', mode: 'burgers' },
@@ -398,28 +413,8 @@ export default function HomeScreen({ navigation }) {
               ))}
             </View>
             <View
-              style={[
-                styles.searchWrapper,
-                { backgroundColor: themeColors.card, borderColor: themeColors.border },
-              ]}
+              style={styles.filterBar}
             >
-              <Text style={[styles.searchIcon, { color: themeColors.muted }]}>🔍</Text>
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search restaurants, cuisines..."
-                placeholderTextColor={themeColors.inputPlaceholder}
-                style={[styles.searchInput, { color: themeColors.textPrimary }]}
-                autoCorrect={false}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Text style={[styles.clearText, { color: themeColors.accent }]}>Clear</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={styles.filterBar}>
               <FilterChip
                 label="All"
                 active={filterMode === 'all'}
@@ -469,53 +464,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 12,
-  },
-  heroBanner: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    padding: 20,
-    position: 'relative',
-  },
-  heroImage: {
-    opacity: 0.6,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  heroContent: {
-    gap: 8,
-  },
-  heroKicker: {
-    color: '#facc15',
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  heroTitle: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  heroBody: {
-    color: '#f8fafc',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  heroCTA: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: '#f97316',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-  },
-  heroCTAText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   quickRow: {
     flexDirection: 'row',
@@ -575,12 +523,37 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
   },
-  locationLine: {
+  primarySearchCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  primarySearchTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  primarySearchInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  fullSearchButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  fullSearchText: {
+    fontWeight: '700',
     fontSize: 13,
   },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
+  locationLine: {
+    fontSize: 13,
   },
   card: {
     borderRadius: 16,
