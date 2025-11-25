@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as MediaLibrary from 'expo-media-library';
-import { Image as ExpoImage } from 'expo-image';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFavourites } from '../contexts/FavouritesContext';
@@ -29,167 +27,103 @@ const ProfileScreen = ({ navigation }) => {
     (user?.displayName && user.displayName.trim()) ||
     user?.email?.split('@')[0] ||
     'HalalWay user';
+  const initialsForName = name => {
+    if (!name) return 'HW';
+    const cleaned = name.trim();
+    if (!cleaned) return 'HW';
+    const parts = cleaned.split(/\s+/).slice(0, 2);
+    return parts.map(part => part[0]?.toUpperCase() ?? '').join('') || 'HW';
+  };
+  const [avatarUri, setAvatarUri] = useState(null);
   const favouriteRestaurants = restaurants.filter(r => favourites.includes(r.id));
-  const [profilePhoto, setProfilePhoto] = useState(null);
-  const profilePhotoKey = user ? `profilePhoto:${user.uid}` : null;
-  const [photoModalVisible, setPhotoModalVisible] = useState(false);
-  const [savingPhoto, setSavingPhoto] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    const loadPhoto = async () => {
-      if (!profilePhotoKey) {
-        if (isMounted) setProfilePhoto(null);
-        return;
-      }
+    const loadAvatar = async () => {
       try {
-        const stored = await AsyncStorage.getItem(profilePhotoKey);
-        if (isMounted) {
-          setProfilePhoto(stored);
+        const saved = await AsyncStorage.getItem('profileAvatarUri');
+        if (saved) {
+          // eslint-disable-next-line no-console
+          console.log('Loaded avatarUri:', saved);
+          setAvatarUri(saved);
         }
-      } catch (error) {
-        if (isMounted) {
-          setProfilePhoto(null);
-        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log('Error loading avatar:', e);
       }
     };
-    loadPhoto();
-    return () => {
-      isMounted = false;
-    };
-  }, [profilePhotoKey]);
 
-  const persistProfilePhoto = async uri => {
-    if (!profilePhotoKey) {
-      return;
-    }
+    loadAvatar();
+  }, []);
+
+  const handleChangeAvatar = async () => {
     try {
-      if (uri) {
-        await AsyncStorage.setItem(profilePhotoKey, uri);
-      } else {
-        await AsyncStorage.removeItem(profilePhotoKey);
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn('Failed to persist profile photo', error);
-    }
-  };
+      const choice = await new Promise(resolve => {
+        Alert.alert(
+          'Profile photo',
+          'How would you like to add your photo?',
+          [
+            { text: 'Take photo', onPress: () => resolve('camera') },
+            { text: 'Choose from library', onPress: () => resolve('library') },
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+          ],
+          { cancelable: true },
+        );
+      });
 
-  const handlePhotoResult = async result => {
-    if (!result?.canceled && result.assets?.length) {
-      const asset = result.assets[0];
-      let uri = asset.uri || asset.localUri;
-      if (!uri && asset.assetId) {
-        try {
-          const info = await MediaLibrary.getAssetInfoAsync(asset.assetId);
-          uri = info.localUri || info.uri;
-        } catch {
-          // ignore
+      if (!choice) return;
+
+      if (choice === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Camera access is required.');
+          return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets && result.assets[0]?.uri) {
+          const uri = result.assets[0].uri;
+          // eslint-disable-next-line no-console
+          console.log('Camera uri:', uri);
+          setAvatarUri(uri);
+          await AsyncStorage.setItem('profileAvatarUri', uri);
+        }
+        return;
+      }
+
+      if (choice === 'library') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Photo library access is required.');
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets && result.assets[0]?.uri) {
+          const uri = result.assets[0].uri;
+          // eslint-disable-next-line no-console
+          console.log('Library uri:', uri);
+          setAvatarUri(uri);
+          await AsyncStorage.setItem('profileAvatarUri', uri);
         }
       }
-      if (!uri) {
-        Alert.alert('Error', 'Could not load the selected photo. Please try again.');
-        return;
-      }
-      setProfilePhoto(uri);
-      persistProfilePhoto(uri);
-    }
-  };
-
-  const pickProfilePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      const granted = status === 'granted' || status === 'limited';
-      if (!granted) {
-        Alert.alert('Permission required', 'Please grant photo library permissions to update your profile picture.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      await handlePhotoResult(result);
-    } catch (error) {
+    } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('Failed to pick profile photo', error);
-      Alert.alert('Error', 'Unable to pick an image right now. Please try again later.');
+      console.log('Error changing avatar:', e);
+      Alert.alert('Error', 'Something went wrong while changing your photo.');
     }
-  };
-
-  const takeProfilePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission required', 'Please grant camera permissions to take a profile picture.');
-        return;
-      }
-      const cameraAvailable = await ImagePicker.isCameraAvailableAsync?.();
-      if (cameraAvailable === false) {
-        Alert.alert('Camera unavailable', 'No camera available on this device.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      await handlePhotoResult(result);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn('Failed to take profile photo', error);
-      Alert.alert('Error', 'Unable to take a photo right now. Please try again later.');
-    }
-  };
-
-  const promptForPhotoSource = () => {
-    Alert.alert('Update profile photo', 'Choose how you want to add a photo.', [
-      { text: 'Take a photo', onPress: takeProfilePhoto },
-      { text: 'Choose from library', onPress: pickProfilePhoto },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
   };
 
   const handleThemeChange = async nextMode => {
     await Haptics.selectionAsync();
     setThemeMode(nextMode);
-  };
-
-  const openPhotoModal = () => {
-    if (profilePhoto) {
-      setPhotoModalVisible(true);
-    }
-  };
-
-  const closePhotoModal = () => setPhotoModalVisible(false);
-
-  const savePhotoToLibrary = async () => {
-    if (!profilePhoto) return;
-    try {
-      setSavingPhoto(true);
-      const { status } = await MediaLibrary.getPermissionsAsync();
-      let finalStatus = status;
-      if (status !== 'granted') {
-        const request = await MediaLibrary.requestPermissionsAsync();
-        finalStatus = request.status;
-      }
-      if (finalStatus !== 'granted') {
-        Alert.alert('Permission required', 'Please allow photo access to save your profile picture.');
-        return;
-      }
-      await MediaLibrary.saveToLibraryAsync(profilePhoto);
-      Alert.alert('Saved', 'Profile photo saved to your camera roll.');
-    } catch (error) {
-      Alert.alert('Error', 'Unable to save the photo right now.');
-    } finally {
-      setSavingPhoto(false);
-    }
   };
 
   if (!user) {
@@ -209,41 +143,34 @@ const ProfileScreen = ({ navigation }) => {
       <Text style={[styles.title, { color: primaryText, textAlign: 'center' }]}>Profile</Text>
       <View style={styles.avatarRow}>
         <View style={styles.avatarSection}>
-        <View
-          style={[
-            styles.avatar,
-            { backgroundColor: themeColors.tagBackground, borderColor: themeColors.border },
-          ]}
-        >
-          {profilePhoto ? (
-            <TouchableOpacity onPress={openPhotoModal} activeOpacity={0.85}>
-              <ExpoImage
-                source={{ uri: profilePhoto }}
-                style={styles.avatarImage}
-                contentFit="cover"
-                onError={() => {
-                  Alert.alert('Image error', 'Could not load your photo. Please try again.');
-                  setProfilePhoto(null);
-                }}
-              />
-            </TouchableOpacity>
-          ) : (
-            <Text style={[styles.avatarPlaceholder, { color: themeColors.textSecondary }]}>Add photo</Text>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.avatar,
+              { backgroundColor: themeColors.tagBackground, borderColor: themeColors.border },
+            ]}
+            onPress={handleChangeAvatar}
+            activeOpacity={0.85}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={[styles.avatarInitials, { color: themeColors.textSecondary }]}>
+                  {initialsForName(user?.displayName || user?.email || preferredName)}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
-      </View>
-      <View style={styles.avatarText}>
-        <Text style={[styles.profileName, { color: primaryText }]}>{preferredName}</Text>
-        {username ? (
-          <Text style={[styles.profileHandle, { color: secondaryText }]}>@{username}</Text>
-        ) : null}
-        <TouchableOpacity
-          style={[styles.avatarButton, { backgroundColor: 'transparent' }]}
-          onPress={promptForPhotoSource}
-        >
-          <Text style={[styles.avatarButtonText, { color: themeColors.accent }]}>Edit profile photo</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.avatarText}>
+          <Text style={[styles.profileName, { color: primaryText }]}>{preferredName}</Text>
+          {username ? (
+            <Text style={[styles.profileHandle, { color: secondaryText }]}>@{username}</Text>
+          ) : null}
+          <TouchableOpacity style={[styles.avatarButton, { backgroundColor: 'transparent' }]} onPress={handleChangeAvatar}>
+            <Text style={[styles.avatarButtonText, { color: themeColors.accent }]}>Edit profile photo</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={[styles.section, styles.socialSection, { backgroundColor: cardBackground, borderColor }]}>
         <View style={styles.socialHeader}>
@@ -399,41 +326,6 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={[styles.logoutText, { color: secondaryText }]}>Log out</Text>
       </TouchableOpacity>
       </ScrollView>
-      <Modal
-        visible={photoModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closePhotoModal}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: cardBackground, borderColor }]}>
-            {profilePhoto ? (
-              <ExpoImage
-                source={{ uri: profilePhoto }}
-                style={styles.modalImage}
-                contentFit="contain"
-                onError={() => {
-                  Alert.alert('Image error', 'Could not load your photo preview.');
-                }}
-              />
-            ) : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: themeColors.accent }]}
-                onPress={savePhotoToLibrary}
-                disabled={savingPhoto}
-              >
-                <Text style={[styles.modalButtonText, { color: themeColors.accentContrast }]}>
-                  {savingPhoto ? 'Saving...' : 'Save to camera roll'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: 'transparent', borderColor }]} onPress={closePhotoModal}>
-                <Text style={[styles.modalButtonText, { color: primaryText }]}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -512,11 +404,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
   },
   avatarPlaceholder: {
-    fontSize: 12,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#555',
   },
   avatarButton: {
     marginTop: 12,
@@ -669,41 +572,6 @@ const styles = StyleSheet.create({
   },
   appearanceSection: {
     marginTop: 24,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxHeight: '85%',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
-    alignItems: 'center',
-  },
-  modalImage: {
-    width: '100%',
-    height: 320,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  modalActions: {
-    width: '100%',
-    gap: 10,
-  },
-  modalButton: {
-    width: '100%',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontWeight: '700',
   },
 });
 
