@@ -36,17 +36,14 @@ const sampleVisits = {
 
 const FriendsScreen = ({ navigation }) => {
   const { themeColors } = useThemePreference();
-  const { followers, following, mutualIds } = useSocial();
+  const { following } = useSocial();
   const backgroundColor = themeColors.background;
   const cardBackground = themeColors.card;
   const borderColor = themeColors.border;
   const primaryText = themeColors.textPrimary;
   const secondaryText = themeColors.textSecondary;
 
-  const mutuals = useMemo(() => {
-    const ids = new Set(mutualIds);
-    return following.filter(f => ids.has(f.id));
-  }, [following, mutualIds]);
+  const feedPeople = useMemo(() => following, [following]);
 
   const visitCards = person => {
     const visits = sampleVisits[person.id] || [];
@@ -72,7 +69,7 @@ const FriendsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: primaryText }]}>Friends</Text>
+        <Text style={[styles.title, { color: primaryText }]}>Feed</Text>
         <TouchableOpacity
           style={[styles.messageButton, { borderColor }]}
           onPress={() => navigation.navigate('Messages')}
@@ -82,21 +79,27 @@ const FriendsScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {mutuals.length === 0 ? (
+        {feedPeople.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: cardBackground, borderColor }]}>
-            <Text style={[styles.emptyText, { color: secondaryText }]}>Add some mutuals to see their recent spots.</Text>
+            <Text style={[styles.emptyText, { color: secondaryText }]}>Follow some people to see their recent spots.</Text>
           </View>
         ) : (
-          mutuals.map(person => (
+          feedPeople.map(person => (
             <View key={person.id} style={[styles.friendCard, { backgroundColor: cardBackground, borderColor }]}>
               <View style={styles.friendHeader}>
-                <View style={[styles.avatar, { backgroundColor: themeColors.tagBackground }]}>
-                  <Text style={[styles.avatarText, { color: primaryText }]}>{initialsForName(person.name)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.name, { color: primaryText }]}>{person.name}</Text>
-                  <Text style={[styles.handle, { color: secondaryText }]}>@{person.handle}</Text>
-                </View>
+                <TouchableOpacity
+                  style={styles.personHeader}
+                  onPress={() => navigation.navigate('PersonProfile', { personId: person.id })}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.avatar, { backgroundColor: themeColors.tagBackground }]}>
+                    <Text style={[styles.avatarText, { color: primaryText }]}>{initialsForName(person.name)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.name, { color: primaryText }]}>{person.name}</Text>
+                    <Text style={[styles.handle, { color: secondaryText }]}>@{person.handle}</Text>
+                  </View>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.miniMessage, { borderColor }]}
                   onPress={() => navigation.navigate('MessageThread', { personId: person.id })}
@@ -144,6 +147,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  personHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
   },
   avatar: {
     width: 48,

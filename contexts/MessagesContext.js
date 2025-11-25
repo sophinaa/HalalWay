@@ -69,9 +69,19 @@ export const MessagesProvider = ({ children }) => {
     });
   };
 
+  const clearThread = personId => {
+    if (!personId) return;
+    setThreads(prev => {
+      const { [personId]: _, ...rest } = prev;
+      persist(rest);
+      return rest;
+    });
+  };
+
   const value = {
     threads,
     sendMessage,
+    clearThread,
   };
 
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>;

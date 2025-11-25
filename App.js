@@ -26,6 +26,7 @@ import { SocialProvider } from './contexts/SocialContext';
 import { MessagesProvider } from './contexts/MessagesContext';
 import MessagesScreen from './screens/MessagesScreen';
 import MessageThreadScreen from './screens/MessageThreadScreen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -115,16 +116,18 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SocialProvider>
-          <MessagesProvider>
-            <FavouritesProvider>
-              <AppNavigator />
-            </FavouritesProvider>
-          </MessagesProvider>
-        </SocialProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <SocialProvider>
+            <MessagesProvider>
+              <FavouritesProvider>
+                <AppNavigator />
+              </FavouritesProvider>
+            </MessagesProvider>
+          </SocialProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

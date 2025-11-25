@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMessages } from '../contexts/MessagesContext';
@@ -9,7 +9,7 @@ import restaurants from '../data/dundeeStAndrewsRestaurants';
 
 const MessageThreadScreen = ({ route, navigation }) => {
   const { personId } = route.params ?? {};
-  const { threads, sendMessage } = useMessages();
+  const { threads, sendMessage, clearThread } = useMessages();
   const { followers, following } = useSocial();
   const { themeColors } = useThemePreference();
   const [draft, setDraft] = useState('');
@@ -26,6 +26,17 @@ const MessageThreadScreen = ({ route, navigation }) => {
   }, [followers, following, personId]);
 
   const messages = threads[personId] || [];
+
+  const handleClear = () => {
+    Alert.alert('Clear chat?', 'This will remove the conversation from this device.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: () => clearThread(personId),
+      },
+    ]);
+  };
 
   const renderRestaurantPreview = meta => {
     if (!meta?.restaurantId) return null;
@@ -62,12 +73,26 @@ const MessageThreadScreen = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}
       >
+        <View style={[styles.header, { borderColor }]}>
+          <View style={[styles.headerAvatar, { backgroundColor: themeColors.tagBackground }]}>
+            <Text style={[styles.headerAvatarText, { color: primaryText }]}>{person.name?.charAt(0)?.toUpperCase()}</Text>
+          </View>
+          <View style={styles.headerTextWrap}>
+            <Text style={[styles.title, { color: primaryText }]} numberOfLines={1}>
+              {person.name}
+            </Text>
+            <Text style={[styles.subtitle, { color: secondaryText }]}>Active now</Text>
+          </View>
+          <TouchableOpacity style={[styles.clearButton, { borderColor }]} onPress={handleClear} activeOpacity={0.85}>
+            <Text style={[styles.clearText, { color: themeColors.accent }]}>Clear</Text>
+          </TouchableOpacity>
+        </View>
         <ScrollView
           style={styles.thread}
           contentContainerStyle={styles.threadContent}
@@ -75,27 +100,28 @@ const MessageThreadScreen = ({ route, navigation }) => {
         >
           {messages.map(msg => {
             const mine = msg.from === 'me';
+            const bubbleBg = mine ? themeColors.accent : themeColors.card;
+            const textColor = mine ? themeColors.accentContrast : primaryText;
+            const time = msg.ts ? new Date(msg.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
             return (
-              <View
-                key={msg.id}
-                style={[
-                  styles.bubble,
-                  {
-                    alignSelf: mine ? 'flex-end' : 'flex-start',
-                    backgroundColor: mine ? themeColors.accent : cardBackground,
-                    borderColor,
-                  },
-                ]}
-              >
-                <Text
+              <View key={msg.id} style={[styles.bubbleWrap, { alignItems: mine ? 'flex-end' : 'flex-start' }]}>
+                <View
                   style={[
-                    styles.bubbleText,
-                    { color: mine ? themeColors.accentContrast : primaryText },
+                    styles.bubble,
+                    {
+                      backgroundColor: bubbleBg,
+                      alignSelf: mine ? 'flex-end' : 'flex-start',
+                      borderTopLeftRadius: mine ? 16 : 4,
+                      borderTopRightRadius: mine ? 4 : 16,
+                    },
                   ]}
                 >
-                  {msg.text}
-                </Text>
-                {renderRestaurantPreview(msg.meta)}
+                  <Text style={[styles.bubbleText, { color: textColor }]}>{msg.text}</Text>
+                  {renderRestaurantPreview(msg.meta)}
+                </View>
+                {time ? (
+                  <Text style={[styles.timeText, { color: secondaryText }]}>{time}</Text>
+                ) : null}
               </View>
             );
           })}
@@ -128,18 +154,43 @@ const MessageThreadScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '700' },
-  thread: { flex: 1 },
-  threadContent: { padding: 16, paddingBottom: 24 },
-  bubble: {
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-    maxWidth: '78%',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 2,
+    paddingBottom: 3,
+    borderBottomWidth: 1,
   },
-  bubbleText: { fontSize: 14 },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  headerAvatarText: { fontWeight: '700' },
+  headerTextWrap: { flex: 1 },
+  title: { fontSize: 18, fontWeight: '700' },
+  subtitle: { fontSize: 12 },
+  thread: { flex: 1 },
+  threadContent: { paddingHorizontal: 8, paddingTop: 6, paddingBottom: 16, gap: 6 },
+  clearButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  clearText: { fontWeight: '700', fontSize: 12 },
+  bubbleWrap: { maxWidth: '100%', gap: 2 },
+  bubble: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  bubbleText: { fontSize: 14, lineHeight: 20 },
+  timeText: { fontSize: 11 },
   restaurantCard: {
     marginTop: 8,
     borderWidth: 1,
@@ -163,12 +214,12 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 120,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 24,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 14,
   },
-  sendButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
+  sendButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20 },
   sendText: { fontWeight: '700' },
 });
 
