@@ -164,10 +164,10 @@ const RestaurantDetailsScreen = ({ route }) => {
         {halalInfo?.notes ? <Text style={[styles.text, { color: secondaryText }]}>Notes: {halalInfo.notes}</Text> : null}
       </View>
 
-      {openingHours && typeof openingHours === 'object' && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: primaryText }]}>Opening Hours</Text>
-          {Object.entries(openingHours).map(([dayKey, slots]) => {
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: primaryText }]}>Opening Hours</Text>
+        {openingHours && typeof openingHours === 'object' ? (
+          Object.entries(openingHours).map(([dayKey, slots]) => {
             const label = String(dayKey);
 
             let slotText = 'Not available';
@@ -185,9 +185,11 @@ const RestaurantDetailsScreen = ({ route }) => {
                 {label}: {slotText}
               </Text>
             );
-          })}
-        </View>
-      )}
+          })
+        ) : (
+          <Text style={[styles.text, { color: secondaryText }]}>Hours not available</Text>
+        )}
+      </View>
 
       {tags && tags.length > 0 && (
         <View style={styles.section}>
@@ -196,12 +198,12 @@ const RestaurantDetailsScreen = ({ route }) => {
         </View>
       )}
 
-      {serviceOptions && serviceOptions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: primaryText }]}>Service Options</Text>
-          <Text style={[styles.text, { color: secondaryText }]}>{serviceOptions.join(' · ')}</Text>
-        </View>
-      )}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: primaryText }]}>Service Options</Text>
+        <Text style={[styles.text, { color: secondaryText }]}>
+          {serviceOptions && serviceOptions.length > 0 ? serviceOptions.join(' · ') : 'Not available'}
+        </Text>
+      </View>
 
       {reviews && reviews.length > 0 && (
         <View style={styles.section}>

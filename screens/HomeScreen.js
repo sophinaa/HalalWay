@@ -65,6 +65,19 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
       ? 'No'
       : 'Unknown';
   const tags = Array.isArray(item.tags) ? item.tags : [];
+  const formatTodayHours = openingHours => {
+    if (!openingHours || typeof openingHours !== 'object') return 'Hours not available';
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayKey = days[new Date().getDay()];
+    const slots = openingHours[todayKey];
+    if (!Array.isArray(slots) || slots.length === 0) return 'Closed today';
+    const validSlots = slots.filter(
+      slot => slot && typeof slot.open === 'string' && typeof slot.close === 'string',
+    );
+    if (!validSlots.length) return 'Closed today';
+    return validSlots.map(slot => `${slot.open}–${slot.close}`).join(', ');
+  };
+  const serviceOptions = Array.isArray(item.serviceOptions) ? item.serviceOptions.join(' · ') : 'Service info N/A';
 
   return (
     <TouchableOpacity
@@ -96,6 +109,12 @@ const RestaurantCard = ({ item, onPress, onViewMap, themeColors }) => {
       </Text>
       <Text style={[styles.metaNote, { color: colors.muted ?? '#9ca3af' }]}>
         {item.distanceMiles != null ? `${item.distanceMiles.toFixed(1)} miles away` : 'Distance unavailable'}
+      </Text>
+      <Text style={[styles.metaNote, { color: colors.textSecondary ?? '#475569' }]}>
+        Today: {formatTodayHours(item.openingHours)}
+      </Text>
+      <Text style={[styles.metaNote, { color: colors.textSecondary ?? '#475569' }]}>
+        Services: {serviceOptions}
       </Text>
 
       <View style={styles.tagRow}>
