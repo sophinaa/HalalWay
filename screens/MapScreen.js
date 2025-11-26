@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
@@ -45,16 +53,20 @@ const MapScreen = () => {
   const route = useRoute();
   const mapRef = useRef(null);
   const bottomListViewability = useRef({ itemVisiblePercentThreshold: 60 });
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(null);
+  const [filterMode, setFilterMode] = useState('all');
+  const [isFilterPending, startFilterTransition] = useTransition();
 
   const restaurantsWithLocation = useMemo(
     () => restaurants.filter(r => r?.location?.lat != null && r?.location?.lng != null),
     [],
   );
-  const [filterMode, setFilterMode] = useState('all');
+  const deferredFilterMode = useDeferredValue(filterMode);
   const [mapExpanded, setMapExpanded] = useState(false);
   const [showBottomList, setShowBottomList] = useState(false);
   const filteredRestaurants = useMemo(() => {
-    switch (filterMode) {
+    switch (deferredFilterMode) {
       case 'all-halal':
         return restaurantsWithLocation.filter(r => r.halalInfo?.overallStatus === 'all-halal');
       case 'no-alcohol':
@@ -64,7 +76,7 @@ const MapScreen = () => {
       default:
         return restaurantsWithLocation;
     }
-  }, [filterMode, favourites, restaurantsWithLocation]);
+  }, [deferredFilterMode, favourites, restaurantsWithLocation]);
   const [selectedId, setSelectedId] = useState(filteredRestaurants[0]?.id ?? null);
 
   const selectedRestaurant =
@@ -86,34 +98,44 @@ const MapScreen = () => {
         }
       : defaultRegion;
 
-  const focusOnRestaurant = useCallback(restaurant => {
-    if (!restaurant?.location) {
-      return;
-    }
-    setSelectedId(restaurant.id);
-    const region = {
-      latitude: restaurant.location.lat,
-      longitude: restaurant.location.lng,
-      latitudeDelta: 0.02,
-      longitudeDelta: 0.02,
-    };
-    requestAnimationFrame(() => {
-      mapRef.current?.animateToRegion(region, 500);
-    });
-  }, []);
+  const focusOnRestaurant = useCallback(
+    restaurant => {
+      if (!restaurant?.location) {
+        return;
+      }
+      setSelectedId(restaurant.id);
+      if (!mapReady || !mapRef.current) {
+        return;
+      }
+      const region = {
+        latitude: restaurant.location.lat,
+        longitude: restaurant.location.lng,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      };
+      requestAnimationFrame(() => {
+        mapRef.current?.animateToRegion?.(region, 500);
+      });
+    },
+    [mapReady],
+  );
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }) => {
+      if (isFilterPending) {
+        return;
+      }
       const firstRestaurant = viewableItems?.find(v => v.item && !v.item.mapOnly)?.item;
       if (firstRestaurant) {
         focusOnRestaurant(firstRestaurant);
       }
     },
-    [focusOnRestaurant],
+    [focusOnRestaurant, isFilterPending],
   );
 
   useEffect(() => {
     if (filteredRestaurants.length === 0) {
       setSelectedId(null);
+      setShowBottomList(false);
       return;
     }
     const stillVisible = filteredRestaurants.some(r => r.id === selectedId);
@@ -138,6 +160,11 @@ const MapScreen = () => {
     restaurantsWithLocation,
     route?.params?.focusRestaurantId,
   ]);
+
+  const handleFilterChange = mode => {
+    startFilterTransition(() => setFilterMode(mode));
+    setShowBottomList(false);
+  };
 
   const handleOpenMaps = (restaurant, provider) => {
     if (!restaurant?.location) {
@@ -233,25 +260,25 @@ const MapScreen = () => {
           <FilterChip
             label="All"
             active={filterMode === 'all'}
-            onPress={() => setFilterMode('all')}
+            onPress={() => handleFilterChange('all')}
             themeColors={themeColors}
           />
           <FilterChip
             label="All-halal"
             active={filterMode === 'all-halal'}
-            onPress={() => setFilterMode('all-halal')}
+            onPress={() => handleFilterChange('all-halal')}
             themeColors={themeColors}
           />
           <FilterChip
             label="No alcohol"
             active={filterMode === 'no-alcohol'}
-            onPress={() => setFilterMode('no-alcohol')}
+            onPress={() => handleFilterChange('no-alcohol')}
             themeColors={themeColors}
           />
           <FilterChip
             label="Favourites"
             active={filterMode === 'favourites'}
-            onPress={() => setFilterMode('favourites')}
+            onPress={() => handleFilterChange('favourites')}
             themeColors={themeColors}
           />
         </View>
@@ -262,8 +289,15 @@ const MapScreen = () => {
             { backgroundColor: themeColors.card, borderColor: themeColors.border },
           ]}
         >
-          <MapView ref={mapRef} style={StyleSheet.absoluteFill} initialRegion={initialRegion}>
+          <MapView
+            ref={mapRef}
+            style={StyleSheet.absoluteFill}
+            initialRegion={initialRegion}
+            onMapReady={() => setMapReady(true)}
+            onError={evt => setMapError(evt?.nativeEvent?.errorMessage || 'Map unavailable')}
+          >
             {filteredRestaurants.map(restaurant => {
+              if (!restaurant?.location) return null;
               const isActive = restaurant.id === selectedId;
               return (
                 <Marker
@@ -296,6 +330,33 @@ const MapScreen = () => {
               );
             })}
           </MapView>
+          {(isFilterPending || !mapReady || mapError || filteredRestaurants.length === 0) && (
+            <View style={styles.mapFallback}>
+              <View
+                style={[
+                  styles.mapFallbackCard,
+                  { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                ]}
+              >
+                <Text style={[styles.mapFallbackTitle, { color: themeColors.textPrimary }]}>
+                  {mapError
+                    ? 'Map unavailable right now'
+                    : filteredRestaurants.length === 0
+                    ? 'No places for this filter'
+                    : !mapReady
+                    ? 'Loading map...'
+                    : 'Updating map...'}
+                </Text>
+                <Text style={[styles.mapFallbackSubtitle, { color: themeColors.textSecondary }]}>
+                  {mapError
+                    ? 'Please retry in a moment.'
+                    : filteredRestaurants.length === 0
+                    ? 'Try a different filter to see nearby spots.'
+                    : 'We will show pins as soon as the data is ready.'}
+                </Text>
+              </View>
+            </View>
+          )}
           <TouchableOpacity
             style={[
               styles.mapToggle,
@@ -599,6 +660,29 @@ const styles = StyleSheet.create({
   mapToggleText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  mapFallback: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  mapFallbackCard: {
+    width: '100%',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  mapFallbackTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  mapFallbackSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
 
